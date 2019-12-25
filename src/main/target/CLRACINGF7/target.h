@@ -22,11 +22,12 @@
 #define TARGET_BOARD_IDENTIFIER "CLR7"
 #define USBD_PRODUCT_STRING "CLRACINGF7"
 
-#define USE_TARGET_CONFIG
+// Use target-specific hardware descriptors (don't use common_hardware.h)
+// #define USE_TARGET_HARDWARE_DESCRIPTORS
 
 /*** Indicators ***/
 #define LED0                PB0
-#define USE_BEEPER
+// #define USE_BEEPER
 #define BEEPER              PB4
 #define BEEPER_INVERTED
 
@@ -36,7 +37,7 @@
 #define USE_GYRO
 
 // We use dual IMU sensors, they have to be described in the target file
-#define USE_TARGET_IMU_HARDWARE_DESCRIPTORS
+// #define USE_TARGET_IMU_HARDWARE_DESCRIPTORS
 #define USE_MPU_DATA_READY_SIGNAL
 #define USE_DUAL_GYRO
 
@@ -91,9 +92,10 @@
 
 #define USE_I2C
 #define USE_I2C_DEVICE_2       // External I2C
-#define I2C_DEVICE              (I2CDEV_2)
-#define I2C2_SCL                NONE        // PB10 (UART3_TX)
-#define I2C2_SDA                NONE        // PB11 (UART3_RX)
+// #define I2C_DEVICE              (I2CDEV_2)
+#define I2C2_SCL                PB10        // PB10 (UART3_TX)
+#define I2C2_SDA                PB11        // PB11 (UART3_RX)
+#define I2C_DEVICE_2_SHARES_UART3
 
 /*** Onboard flash ***/
 #define USE_FLASHFS
@@ -102,12 +104,13 @@
 #define M25P16_CS_PIN           PB12
 // #define FLASH_SPI_INSTANCE      SPI2
 #define M25P16_SPI_BUS          BUS_SPI2
-// #define USE_FLASH_W25M
-// #define USE_FLASH_W25N01G       // 1G NAND flash support
+#define USE_FLASH_W25M
+#define USE_FLASH_W25N01G       // 1G NAND flash support
+#define ENABLE_BLACKBOX_LOGGING_ON_SPIFLASH_BY_DEFAULT
 
 
 /*** OSD ***/
-// #define USE_OSD
+#define USE_OSD
 #define USE_MAX7456
 // #define MAX7456_SPI_INSTANCE    SPI3
 #define MAX7456_SPI_BUS         BUS_SPI3
@@ -143,16 +146,19 @@
 
 #define SERIAL_PORT_COUNT       7 //VCP, USART1, USART2,USART3,USART4,USART5,USART6
 
-// /*** BARO & MAG ***/
+/*** BARO & MAG ***/
 // #define USE_BARO
-// #define BARO_I2C_BUS            BUS_I2C1
+// #define BARO_I2C_BUS            BUS_I2C2
 // #define USE_BARO_BMP280
 // #define USE_BARO_MS5611
 
-// #define USE_MAG
-// #define USE_MAG_HMC5883
-// #define USE_MAG_QMC5883
-// #define MAG_I2C_INSTANCE         (I2CDEV_2)
+#define USE_MAG
+#define MAG_I2C_BUS             BUS_I2C2
+#define USE_MAG_HMC5883
+#define USE_MAG_QMC5883
+
+// #define USE_RANGEFINDER
+// #define RANGEFINDER_I2C_BUS     BUS_I2C2
 
 /*** ADC ***/
 #define USE_ADC
@@ -171,9 +177,10 @@
 // #define DEFAULT_VOLTAGE_METER_SOURCE VOLTAGE_METER_ADC
 // #define DEFAULT_CURRENT_METER_SOURCE CURRENT_METER_ADC
 
+#define SENSORS_SET             (SENSOR_ACC)
 
 /*-------------ESCs----------------*/
-#define USE_ESC_SENSOR
+// #define USE_ESC_SENSOR
 #define USE_SERIAL_4WAY_BLHELI_INTERFACE
 #define USE_ESCSERIAL
 #define ESCSERIAL_TIMER_TX_PIN  PB0  // (HARDARE=0)
@@ -182,28 +189,30 @@
 #define CURRENT_METER_SCALE     250
 
 
-// *************** PINIO ***************************
+/*************** PINIO ***************************/
 #define USE_PINIO
 #define USE_PINIOBOX
 #define PINIO1_PIN              PA14  // VTX power switcher
 
-#define HARDWARE_BIND_PLUG
-#define BINDPLUG_PIN            PB2
+// #define HARDWARE_BIND_PLUG
+// #define BINDPLUG_PIN            PB2
 
 /*** Default settings ***/
-#define ENABLE_BLACKBOX_LOGGING_ON_SPIFLASH_BY_DEFAULT
-// #define DEFAULT_FEATURES        (FEATURE_OSD)
-// #define SERIALRX_UART           SERIAL_PORT_UART5
-#define SERIALRX_UART           SERIAL_PORT_USART5
-#define SERIALRX_PROVIDER       SERIALRX_SBUS
+#define DEFAULT_FEATURES        FEATURE_OSD
+// #define SERIALRX_UART           SERIAL_PORT_USART5
+// #define SERIALRX_PROVIDER       SERIALRX_SBUS
 // #define DEFAULT_RX_FEATURE      FEATURE_RX_SERIAL
-#define DEFAULT_RX_TYPE         RX_TYPE_SERIAL
+// #define DEFAULT_RX_TYPE         RX_TYPE_SERIAL
+#define USE_SERIAL_RX
+
+
 
 
 // #define ENABLE_DSHOT_DMAR       DSHOT_DMAR_ON
-#define MAX_PWM_OUTPUT_PORTS       6
+#define MAX_PWM_OUTPUT_PORTS       7
+#define TARGET_MOTOR_COUNT         7
 #define USE_DSHOT
-#define USE_SERIALSHOT
+// #define USE_SERIALSHOT
 #define USE_ESC_SENSOR
 
 
