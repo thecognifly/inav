@@ -152,10 +152,10 @@
 // #define USE_BARO_BMP280
 // #define USE_BARO_MS5611
 
-#define USE_MAG
-#define MAG_I2C_BUS             BUS_I2C2
-#define USE_MAG_HMC5883
-#define USE_MAG_QMC5883
+// #define USE_MAG
+// #define MAG_I2C_BUS             BUS_I2C2
+// #define USE_MAG_HMC5883
+// #define USE_MAG_QMC5883
 
 // #define USE_RANGEFINDER
 // #define RANGEFINDER_I2C_BUS     BUS_I2C2
@@ -194,8 +194,8 @@
 #define USE_PINIOBOX
 #define PINIO1_PIN              PA14  // VTX power switcher
 
-// #define HARDWARE_BIND_PLUG
-// #define BINDPLUG_PIN            PB2
+#define HARDWARE_BIND_PLUG
+#define BINDPLUG_PIN            PB2
 
 /*** Default settings ***/
 #define DEFAULT_FEATURES        FEATURE_OSD

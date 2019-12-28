@@ -41,20 +41,25 @@ const timerHardware_t timerHardware[USABLE_TIMER_CHANNEL_COUNT] = {
 
     //DEF_TIM(TIM2,  CH2,   PB3, TIM_USE_CAMERA_CONTROL,     0, 0), // USE FOR CAMERA CONTROL
 
-    // Changing the order of the lines below changes the motor number / order
+    // Changing the order of the lines below changes the motor number / order 
+    // on iNAV-Configurator and the FC will generate control commands considering that.
+    // However, the ESC motor positions will respect the PINS according to the comments 
+    // at the end of each line.
     //1
-    DEF_TIM(TIM4,  CH2,  PB7, TIM_USE_MC_MOTOR,               0, 0), // D1-ST3                   MOTOR3
+    DEF_TIM(TIM4,  CH3,  PB8, TIM_USE_MC_MOTOR,               0, 0), // D1-ST7                   PB8=>MOTOR1
     //2
-    DEF_TIM(TIM4,  CH1,  PB6, TIM_USE_MC_MOTOR,               0, 0), // D1-ST0                   MOTOR2
+    DEF_TIM(TIM4,  CH1,  PB6, TIM_USE_MC_MOTOR,               0, 0), // D1-ST0                   PB6=>MOTOR2
     //3
-    DEF_TIM(TIM8,  CH3,  PC8, TIM_USE_MC_MOTOR,               0, 0), // D2-ST2/D2-ST4            MOTOR4
+    DEF_TIM(TIM4,  CH2,  PB7, TIM_USE_MC_MOTOR,               0, 0), // D1-ST3                   PB7=>MOTOR3
     //4
-    DEF_TIM(TIM4,  CH3,  PB8, TIM_USE_MC_MOTOR,               0, 0), // D1-ST7                   MOTOR1
+    DEF_TIM(TIM8,  CH3,  PC8, TIM_USE_MC_MOTOR,               0, 0), // D2-ST2/D2-ST4            PC8=>MOTOR4
 
-    DEF_TIM(TIM4,  CH4,  PB9, TIM_USE_MC_MOTOR,               0, 0), // NONE  TIM4_UP_D1-ST6     MOTOR5
-    DEF_TIM(TIM5,  CH2,  PA1, TIM_USE_MC_MOTOR,               0, 0), // D1-ST4                   MOTOR6
-    DEF_TIM(TIM8,  CH4,  PC9, TIM_USE_MC_MOTOR,               0, 0), // D2-ST7                   MOTOR7
-    DEF_TIM(TIM3,  CH4, PB1, TIM_USE_MC_MOTOR | TIM_USE_LED,  0, 0), // D1-ST2                   LED/MOTOR5
+
+    // NO IDEA HOW TO CONNECT 8 MOTORS TO THE FC, BUT THIS WAS DEFINED FOR BETAFLIGHT...
+    DEF_TIM(TIM4,  CH4,  PB9, TIM_USE_MC_MOTOR,               0, 0), // NONE  TIM4_UP_D1-ST6     PB9=>MOTOR5
+    DEF_TIM(TIM5,  CH2,  PA1, TIM_USE_MC_MOTOR,               0, 0), // D1-ST4                   PA1=>MOTOR6
+    DEF_TIM(TIM8,  CH4,  PC9, TIM_USE_MC_MOTOR,               0, 0), // D2-ST7                   PC9=>MOTOR7
+    DEF_TIM(TIM3,  CH4,  PB1, TIM_USE_MC_MOTOR | TIM_USE_LED, 0, 0), // D1-ST2                   PB1=>LED/MOTOR5
 };
 
 const int timerHardwareCount = sizeof(timerHardware) / sizeof(timerHardware[0]);
