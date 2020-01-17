@@ -65,7 +65,7 @@ PG_RESET_TEMPLATE(positionEstimationConfig_t, positionEstimationConfig,
         .use_gps_velned = 1,         // "Disabled" is mandatory with gps_dyn_model = Pedestrian
         .allow_dead_reckoning = 0,
 
-        .max_surface_altitude = 200,
+        .max_surface_altitude = 200, // maybe change from 200 to 150 to avoid problems with the VL53L0X
 
         .w_xyz_acc_p = 1.0f,
 
@@ -489,6 +489,7 @@ static uint32_t calculateCurrentValidityFlags(timeUs_t currentTimeUs)
 
     if (sensors(SENSOR_RANGEFINDER) && ((currentTimeUs - posEstimator.surface.lastUpdateTime) <= MS2US(INAV_SURFACE_TIMEOUT_MS))) {
         newFlags |= EST_SURFACE_VALID;
+        newFlags |= EST_BARO_VALID;
     }
 
     if (sensors(SENSOR_OPFLOW) && posEstimator.flow.isValid && ((currentTimeUs - posEstimator.flow.lastUpdateTime) <= MS2US(INAV_FLOW_TIMEOUT_MS))) {
@@ -518,7 +519,7 @@ static void estimationPredict(estimationContext_t * ctx)
     }
 
     /* Prediction step: XY-axis */
-    if ((ctx->newFlags & EST_XY_VALID)) {
+    if ((ctx->newFlags & EST_rcCommand[THROTTLE]XY_VALID)) {
         // Predict based on known velocity
         posEstimator.est.pos.x += posEstimator.est.vel.x * ctx->dt;
         posEstimator.est.pos.y += posEstimator.est.vel.y * ctx->dt;
@@ -559,10 +560,23 @@ static bool estimationCalculateCorrection_Z(estimationContext_t * ctx)
                                             (((ctx->newFlags & EST_SURFACE_VALID) && posEstimator.surface.alt < 20.0f && posEstimator.state.isBaroGroundValid) ||
                                              ((ctx->newFlags & EST_BARO_VALID) && posEstimator.state.isBaroGroundValid && posEstimator.baro.alt < posEstimator.state.baroGroundAlt));
 
-        // Altitude
-        const float baroAltResidual = (isAirCushionEffectDetected ? posEstimator.state.baroGroundAlt : posEstimator.baro.alt) - posEstimator.est.pos.z;
-        ctx->estPosCorr.z += baroAltResidual * positionEstimationConfig()->w_z_baro_p * ctx->dt;
-        ctx->estVelCorr.z += baroAltResidual * sq(positionEstimationConfig()->w_z_baro_p) * ctx->dt;
+        //
+        // Altitude correction using barometer
+        // NAV_POSHOLD will not use the rangefinder... maybe this is not necessary if using ALTHOLD+SURFACE
+        //
+        if (sensors(SENSOR_BARO)) { //FIXME: change to something faster than sensors(SENSOR_BARO)...
+            // w_z_baro_p comes from inav_w_z_baro_p and it's only really used here (besides MSP output / fc_msp.c)
+            const float baroAltResidual = (isAirCushionEffectDetected ? posEstimator.state.baroGroundAlt : posEstimator.baro.alt) - posEstimator.est.pos.z;
+            ctx->estPosCorr.z += baroAltResidual * positionEstimationConfig()->w_z_baro_p * ctx->dt;
+            ctx->estVelCorr.z += baroAltResidual * sq(positionEstimationConfig()->w_z_baro_p) * ctx->dt;
+
+            // Accelerometer bias
+            if (!isAirCushionEffectDetected) {
+                ctx->accBiasCorr.z -= baroAltResidual * sq(positionEstimationConfig()->w_z_baro_p);
+            }
+
+            ctx->newEPV = updateEPE(posEstimator.est.epv, ctx->dt, posEstimator.baro.epv, positionEstimationConfig()->w_z_baro_p);
+        }
 
         // If GPS is available - also use GPS climb rate
         if (ctx->newFlags & EST_GPS_Z_VALID) {
@@ -570,13 +584,6 @@ static bool estimationCalculateCorrection_Z(estimationContext_t * ctx)
             const float gpsRocResidual = posEstimator.gps.vel.z - posEstimator.est.vel.z;
             const float gpsRocScaler = bellCurve(gpsRocResidual, 2.5f);
             ctx->estVelCorr.z += gpsRocResidual * positionEstimationConfig()->w_z_gps_v * gpsRocScaler * ctx->dt;
-        }
-
-        ctx->newEPV = updateEPE(posEstimator.est.epv, ctx->dt, posEstimator.baro.epv, positionEstimationConfig()->w_z_baro_p);
-
-        // Accelerometer bias
-        if (!isAirCushionEffectDetected) {
-            ctx->accBiasCorr.z -= baroAltResidual * sq(positionEstimationConfig()->w_z_baro_p);
         }
 
         return true;
