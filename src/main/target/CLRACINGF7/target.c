@@ -45,14 +45,14 @@ const timerHardware_t timerHardware[USABLE_TIMER_CHANNEL_COUNT] = {
     // on iNAV-Configurator and the FC will generate control commands considering that.
     // However, the ESC motor positions will respect the PINS according to the comments 
     // at the end of each line.
-    //1
-    DEF_TIM(TIM4,  CH2,  PB7, TIM_USE_MC_MOTOR,               0, 0), // D1-ST3                   PB7=>MOTOR3
-    //2
-    DEF_TIM(TIM4,  CH1,  PB6, TIM_USE_MC_MOTOR,               0, 0), // D1-ST0                   PB6=>MOTOR2
-    //3
-    DEF_TIM(TIM8,  CH3,  PC8, TIM_USE_MC_MOTOR,               0, 0), // D2-ST2/D2-ST4            PC8=>MOTOR4
     //4
     DEF_TIM(TIM4,  CH3,  PB8, TIM_USE_MC_MOTOR,               0, 0), // D1-ST7                   PB8=>MOTOR1
+    //3
+    DEF_TIM(TIM8,  CH3,  PC8, TIM_USE_MC_MOTOR,               0, 0), // D2-ST2/D2-ST4            PC8=>MOTOR4
+    //2
+    DEF_TIM(TIM4,  CH1,  PB6, TIM_USE_MC_MOTOR,               0, 0), // D1-ST0                   PB6=>MOTOR2
+    //1
+    DEF_TIM(TIM4,  CH2,  PB7, TIM_USE_MC_MOTOR,               0, 0), // D1-ST3                   PB7=>MOTOR3
 
     // NO IDEA HOW TO CONNECT 8 MOTORS TO THE FC, BUT THIS WAS DEFINED FOR BETAFLIGHT...
     DEF_TIM(TIM4,  CH4,  PB9, TIM_USE_MC_MOTOR,               0, 0), // NONE  TIM4_UP_D1-ST6     PB9=>MOTOR5
