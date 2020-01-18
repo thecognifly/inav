@@ -519,7 +519,7 @@ static void estimationPredict(estimationContext_t * ctx)
     }
 
     /* Prediction step: XY-axis */
-    if ((ctx->newFlags & EST_rcCommand[THROTTLE]XY_VALID)) {
+    if ((ctx->newFlags & EST_XY_VALID)) {
         // Predict based on known velocity
         posEstimator.est.pos.x += posEstimator.est.vel.x * ctx->dt;
         posEstimator.est.pos.y += posEstimator.est.vel.y * ctx->dt;
