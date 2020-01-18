@@ -1835,7 +1835,7 @@ bool checkForPositionSensorTimeout(void)
 }
 
 /*-----------------------------------------------------------
- * Processes an update to XY-position and velocity *
+ * Processes an update to XY-position and velocity
  *-----------------------------------------------------------*/
 void updateActualHorizontalPositionAndVelocity(bool estPosValid, bool estVelValid, float newX, float newY, float newVelX, float newVelY)
 {
@@ -1881,7 +1881,7 @@ void updateActualHorizontalPositionAndVelocity(bool estPosValid, bool estVelVali
 }
 
 /*-----------------------------------------------------------
- * Processes an update to Z-position and velocity *
+ * Processes an update to Z-position and velocity
  *-----------------------------------------------------------*/
 void updateActualAltitudeAndClimbRate(bool estimateValid, float newAltitude, float newVelocity, float surfaceDistance, float surfaceVelocity, navigationEstimateStatus_e surfaceStatus)
 {
@@ -2768,7 +2768,7 @@ static void processNavigationRCAdjustments(void)
 }
 
 /*-----------------------------------------------------------
- * A main function to call position controllers at loop rate *
+ * A main function to call position controllers at loop rate
  *-----------------------------------------------------------*/
 void applyWaypointNavigationAndAltitudeHold(void)
 {

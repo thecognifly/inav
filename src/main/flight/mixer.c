@@ -174,9 +174,6 @@ void mixerResetDisarmedMotors(void)
     }
 }
 
-//
-//
-//
 void FAST_CODE NOINLINE writeMotors(void)
 {
     for (int i = 0; i < motorCount; i++) {
@@ -331,9 +328,6 @@ void FAST_CODE NOINLINE mixTable(const float dT)
         mixerThrottleCommand = constrain(globalFunctionValues[GLOBAL_FUNCTION_ACTION_OVERRIDE_THROTTLE], throttleMin, throttleMax); 
     } else
 #endif
-    //
-    // Here is where rcCommand[THROTTLE] is converted into motor commands
-    //
     if (feature(FEATURE_3D)) {
         if (!ARMING_FLAG(ARMED)) throttlePrevious = PWM_RANGE_MIDDLE; // When disarmed set to mid_rc. It always results in positive direction after arming.
 
@@ -388,7 +382,6 @@ void FAST_CODE NOINLINE mixTable(const float dT)
 
     // Now add in the desired throttle, but keep in a range that doesn't clip adjusted
     // roll/pitch/yaw. This could move throttle down, but also up for those low throttle flips.
-    //
     if (ARMING_FLAG(ARMED)) {
         for (int i = 0; i < motorCount; i++) {
             motor[i] = rpyMix[i] + constrain(mixerThrottleCommand * currentMixer[i].throttle, throttleMin, throttleMax);
