@@ -777,6 +777,9 @@ void taskMainPidLoop(timeUs_t currentTimeUs)
     isRXDataNew = false;
 
 #if defined(USE_NAV)
+    //
+    // Where the position / altitude control is updated every loop
+    //
     updatePositionEstimator();
     applyWaypointNavigationAndAltitudeHold();
 #endif
@@ -793,6 +796,7 @@ void taskMainPidLoop(timeUs_t currentTimeUs)
         }
 
         if (thrTiltCompStrength) {
+            // motorConfig()->maxthrottle can be set to avoid crazy behaviours when testing new firmware
             rcCommand[THROTTLE] = constrain(motorConfig()->minthrottle
                                             + (rcCommand[THROTTLE] - motorConfig()->minthrottle) * calculateThrottleTiltCompensationFactor(thrTiltCompStrength),
                                             motorConfig()->minthrottle,
