@@ -489,19 +489,27 @@ static uint32_t calculateCurrentValidityFlags(timeUs_t currentTimeUs)
 
     if (sensors(SENSOR_RANGEFINDER) && ((currentTimeUs - posEstimator.surface.lastUpdateTime) <= MS2US(INAV_SURFACE_TIMEOUT_MS))) {
         newFlags |= EST_SURFACE_VALID;
-        newFlags |= EST_BARO_VALID;
+        newFlags |= EST_BARO_VALID; // This is a hack tying to enable rangefinder only...
     }
 
     if (sensors(SENSOR_OPFLOW) && posEstimator.flow.isValid && ((currentTimeUs - posEstimator.flow.lastUpdateTime) <= MS2US(INAV_FLOW_TIMEOUT_MS))) {
         newFlags |= EST_FLOW_VALID;
     }
 
+    //
+    // To be 100% safe I would change to abs(posEstimator.est.eph) and
+    // abs(posEstimator.est.epv).
+    // This needs stdlib and I'm not sure the effects using it here.
+    //
+    // The default value for max_eph_epv is 1000.0
     if (posEstimator.est.eph < positionEstimationConfig()->max_eph_epv) {
         newFlags |= EST_XY_VALID;
+        // eph => h is for horizontal
     }
 
     if (posEstimator.est.epv < positionEstimationConfig()->max_eph_epv) {
         newFlags |= EST_Z_VALID;
+        // epv => v is for vertical
     }
 
     return newFlags;
@@ -576,6 +584,24 @@ static bool estimationCalculateCorrection_Z(estimationContext_t * ctx)
             }
 
             ctx->newEPV = updateEPE(posEstimator.est.epv, ctx->dt, posEstimator.baro.epv, positionEstimationConfig()->w_z_baro_p);
+        }
+
+        //
+        // Could something like this be used for NAV_POSHOLD when there's no BARO and only FLOW+TOF???????
+        //
+        if (sensors(SENSOR_RANGEFINDER) && (posEstimator.surface.reliability >= RANGEFINDER_RELIABILITY_LOW_THRESHOLD)){
+            const float rangefinderAltResidual = posEstimator.surface.alt - posEstimator.est.pos.z;
+            ctx->estPosCorr.z += rangefinderAltResidual * positionEstimationConfig()->w_z_surface_p * ctx->dt;
+            ctx->estVelCorr.z += rangefinderAltResidual * sq(positionEstimationConfig()->w_z_surface_p) * ctx->dt;
+            // Accelerometer bias
+            if (!isAirCushionEffectDetected) {
+                ctx->accBiasCorr.z -= rangefinderAltResidual * sq(positionEstimationConfig()->w_z_surface_p);
+            }
+
+            // Considering the rangefinder, when reliable, is 10x better than baro.
+            const float rangefinder_epv = positionEstimationConfig()->baro_epv/10.0;
+            ctx->newEPV = updateEPE(posEstimator.est.epv, ctx->dt, rangefinder_epv, positionEstimationConfig()->w_z_surface_p);
+
         }
 
         // If GPS is available - also use GPS climb rate
@@ -719,7 +745,9 @@ static void updateEstimatedTopic(timeUs_t currentTimeUs)
         ctx.estVelCorr.z = (0.0f - posEstimator.est.vel.z) * positionEstimationConfig()->w_z_res_v * ctx.dt;
     }
 
+    //
     // Apply corrections
+    //
     vectorAdd(&posEstimator.est.pos, &posEstimator.est.pos, &ctx.estPosCorr);
     vectorAdd(&posEstimator.est.vel, &posEstimator.est.vel, &ctx.estVelCorr);
 

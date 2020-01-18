@@ -271,7 +271,7 @@ bool rangefinderProcess(float cosTiltAngle)
 }
 
 /**
- * Get the latest altitude that was computed, or RANGEFINDER_OUT_OF_RANGE if sonarCalculateAltitude
+ * Get the latest altitude (in centimeters) that was computed, or RANGEFINDER_OUT_OF_RANGE if sonarCalculateAltitude
  * has never been called.
  */
 int32_t rangefinderGetLatestAltitude(void)

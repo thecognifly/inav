@@ -68,20 +68,22 @@ bool estimationCalculateCorrection_XY_FLOW(estimationContext_t * ctx)
         return false;
     }
 
-    // FIXME: flow may use AGL estimate if available
-    const bool canUseFlow = (posEstimator.surface.reliability >= RANGEFINDER_RELIABILITY_LOW_THRESHOLD);
-
-    if (!canUseFlow) {
-        return false;
-    }
+    fpVector3_t flowVel;
 
     // Calculate linear velocity based on angular velocity and altitude
     // Technically we should calculate arc length here, but for fast sampling this is accurate enough
-    fpVector3_t flowVel = {
-        .x = - (posEstimator.flow.flowRate[Y] - posEstimator.flow.bodyRate[Y]) * posEstimator.surface.alt,
-        .y =   (posEstimator.flow.flowRate[X] - posEstimator.flow.bodyRate[X]) * posEstimator.surface.alt,
-        .z =    posEstimator.est.vel.z
-    };
+    if (posEstimator.est.aglQual >= SURFACE_QUAL_MID){
+        flowVel.x = - (posEstimator.flow.flowRate[Y] - posEstimator.flow.bodyRate[Y]) * posEstimator.est.aglAlt;
+        flowVel.y =   (posEstimator.flow.flowRate[X] - posEstimator.flow.bodyRate[X]) * posEstimator.est.aglAlt;
+        flowVel.z =    posEstimator.est.vel.z;
+    } else if (posEstimator.surface.reliability >= RANGEFINDER_RELIABILITY_LOW_THRESHOLD){
+        flowVel.x = - (posEstimator.flow.flowRate[Y] - posEstimator.flow.bodyRate[Y]) * posEstimator.surface.alt;
+        flowVel.y =   (posEstimator.flow.flowRate[X] - posEstimator.flow.bodyRate[X]) * posEstimator.surface.alt;
+        flowVel.z =    posEstimator.est.vel.z;
+    } else
+    {
+        return false;
+    }    
 
     // At this point flowVel will hold linear velocities in earth frame
     imuTransformVectorBodyToEarth(&flowVel);

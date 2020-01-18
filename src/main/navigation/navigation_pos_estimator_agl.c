@@ -45,7 +45,7 @@ extern navigationPosEstimator_t posEstimator;
 
 #ifdef USE_RANGEFINDER
 /**
- * Read surface and update alt/vel topic
+ * Read surface and update alt topic
  *  Function is called from TASK_RANGEFINDER at arbitrary rate - as soon as new measurements are available
  */
 void updatePositionEstimator_SurfaceTopic(timeUs_t currentTimeUs, float newSurfaceAlt)
@@ -56,6 +56,7 @@ void updatePositionEstimator_SurfaceTopic(timeUs_t currentTimeUs, float newSurfa
 
     posEstimator.surface.lastUpdateTime = currentTimeUs;
 
+    // If there's a problem with the rangefinder it will return a negative (-1, -2 or -3) value
     if (newSurfaceAlt >= 0) {
         if (newSurfaceAlt <= positionEstimationConfig()->max_surface_altitude) {
             newReliabilityMeasurement = 1.0f;
@@ -71,7 +72,9 @@ void updatePositionEstimator_SurfaceTopic(timeUs_t currentTimeUs, float newSurfa
         newReliabilityMeasurement = 0.0f;
     }
 
-    /* Reliability is a measure of confidence of rangefinder measurement. It's increased with each valid sample and decreased with each invalid sample */
+    /* Reliability is a measure of confidence of rangefinder measurement. 
+    It's increased with each valid sample and decreased with each invalid sample.
+    If the sensor has a timeout, reliability will drop to 0. */
     if (surfaceDtUs > MS2US(INAV_SURFACE_TIMEOUT_MS)) {
         posEstimator.surface.reliability = 0.0f;
     }
@@ -80,7 +83,7 @@ void updatePositionEstimator_SurfaceTopic(timeUs_t currentTimeUs, float newSurfa
         const float relAlpha = surfaceDt / (surfaceDt + RANGEFINDER_RELIABILITY_RC_CONSTANT);
         posEstimator.surface.reliability = posEstimator.surface.reliability * (1.0f - relAlpha) + newReliabilityMeasurement * relAlpha;
 
-        // Update average sonar altitude if range is good
+        // Update average sonar altitude if the LAST range measurement was good
         if (surfaceMeasurementWithinRange) {
             pt1FilterApply3(&posEstimator.surface.avgFilter, newSurfaceAlt, surfaceDt);
         }
@@ -91,6 +94,12 @@ void updatePositionEstimator_SurfaceTopic(timeUs_t currentTimeUs, float newSurfa
 void estimationCalculateAGL(estimationContext_t * ctx)
 {
 #if defined(USE_RANGEFINDER) && defined(USE_BARO)
+    /*
+        Why do we need barometer for surface?
+        - because it falls back to it if SURFACE_QUAL_LOW, but if the test below is false it
+        will update agl stuff as if SURFACE_QUAL_LOW?!?!? In the case EST_SURFACE_VALID is false
+        it should NOT update anything using alg, isn't it?
+    */
     if ((ctx->newFlags & EST_SURFACE_VALID) && (ctx->newFlags & EST_BARO_VALID)) {
         navAGLEstimateQuality_e newAglQuality = posEstimator.est.aglQual;
         bool resetSurfaceEstimate = false;
