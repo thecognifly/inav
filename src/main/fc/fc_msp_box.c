@@ -187,11 +187,7 @@ void initActiveBoxIds(void)
     activeBoxIds[activeBoxIdCount++] = BOXCAMSTAB;
 
 #ifdef USE_GPS
-    //
-    // Here is the place where ALTHOLD and SURFACE ARE MADE AVAILABLE!!!!
-    //
-    if (sensors(SENSOR_BARO) || (STATE(FIXED_WING) && feature(FEATURE_GPS)) 
-                             || (sensors(SENSOR_OPFLOW) && sensors(SENSOR_RANGEFINDER))) {
+    if (sensors(SENSOR_BARO) || (STATE(FIXED_WING) && feature(FEATURE_GPS))) {
         activeBoxIds[activeBoxIdCount++] = BOXNAVALTHOLD;
         activeBoxIds[activeBoxIdCount++] = BOXSURFACE;
     }
@@ -200,9 +196,6 @@ void initActiveBoxIds(void)
     const bool navReadyPlanes = STATE(FIXED_WING) && sensors(SENSOR_ACC) && feature(FEATURE_GPS);
     const bool navFlowDeadReckoning = sensors(SENSOR_OPFLOW) && sensors(SENSOR_ACC) && positionEstimationConfig()->allow_dead_reckoning;
     if (navFlowDeadReckoning || navReadyQuads || navReadyPlanes) {
-        //
-        // This is working because NAV_POSHOLD is available without GPS or BARO.
-        //
         activeBoxIds[activeBoxIdCount++] = BOXNAVPOSHOLD;
         if (STATE(FIXED_WING)) {
             activeBoxIds[activeBoxIdCount++] = BOXLOITERDIRCHN;

@@ -113,9 +113,6 @@ static void updateAltitudeThrottleController_MC(timeDelta_t deltaMicros)
     posControl.rcAdjustment[THROTTLE] = constrain(posControl.rcAdjustment[THROTTLE], thrAdjustmentMin, thrAdjustmentMax);
 }
 
-//
-//
-//
 bool adjustMulticopterAltitudeFromRCInput(void)
 {
     if (posControl.flags.isTerrainFollowEnabled) {
@@ -173,7 +170,7 @@ void setupMulticopterAltitudeController(void)
         altHoldThrottleRCZero = rcLookupThrottleMid();
     }
     else {
-        // If throttle status is THROTTLE_LOW - use Thr Mid anyway <===
+        // If throttle status is THROTTLE_LOW - use Thr Mid anyway
         if (throttleStatus == THROTTLE_LOW) {
             altHoldThrottleRCZero = rcLookupThrottleMid();
         }
@@ -561,9 +558,6 @@ static void updatePositionAccelController_MC(timeDelta_t deltaMicros, float maxA
     posControl.rcAdjustment[PITCH] = constrain(RADIANS_TO_DECIDEGREES(desiredPitch), -maxBankAngle, maxBankAngle);
 }
 
-//
-//
-//
 static void applyMulticopterPositionController(timeUs_t currentTimeUs)
 {
     static timeUs_t previousTimePositionUpdate;         // Occurs @ GPS update rate
@@ -766,10 +760,6 @@ static void applyMulticopterHeadingController(void)
     updateHeadingHoldTarget(CENTIDEGREES_TO_DEGREES(posControl.desiredState.yaw));
 }
 
-
-//
-//
-//
 void applyMulticopterNavigationController(navigationFSMStateFlags_t navStateFlags, timeUs_t currentTimeUs)
 {
     if (navStateFlags & NAV_CTL_EMERG) {
