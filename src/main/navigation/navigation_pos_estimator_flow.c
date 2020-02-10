@@ -117,10 +117,10 @@ bool estimationCalculateCorrection_XY_FLOW(estimationContext_t * ctx)
     DEBUG_SET(DEBUG_FLOW, 2, posEstimator.est.flowCoordinates[X]);
     DEBUG_SET(DEBUG_FLOW, 3, posEstimator.est.flowCoordinates[Y]);
 
-    DEBUG_SET(DEBUG_EST_POS, 0, posEstimator.est.pos.x);
-    DEBUG_SET(DEBUG_EST_POS, 1, posEstimator.est.pos.y);
-    DEBUG_SET(DEBUG_EST_POS, 2, posEstimator.est.vel.x);
-    DEBUG_SET(DEBUG_EST_POS, 3, posEstimator.est.vel.y);
+    DEBUG_SET(DEBUG_EST_POS, 0, posEstimator.est.pos.x+ctx->estPosCorr.x);
+    DEBUG_SET(DEBUG_EST_POS, 1, posEstimator.est.pos.y+ctx->estPosCorr.y);
+    DEBUG_SET(DEBUG_EST_POS, 2, posEstimator.est.vel.x+ctx->estVelCorr.x);
+    DEBUG_SET(DEBUG_EST_POS, 3, posEstimator.est.vel.y+ctx->estVelCorr.y);
 
     return true;
 #else
