@@ -195,6 +195,14 @@ void estimationCalculateAGL(estimationContext_t * ctx)
     DEBUG_SET(DEBUG_AGL, 2, posEstimator.est.aglAlt);
     DEBUG_SET(DEBUG_AGL, 3, posEstimator.est.aglVel);
 
+    // 0 to 4 are defined inside navigation_pos_estimator_flow
+    // All variables return are floats, so keep that in mind when unwrapping.
+    DEBUG_SET(DEBUG_EST_POS, 5, (posEstimator.est.aglAlt * 100.0F));
+    DEBUG_SET(DEBUG_EST_POS, 6, (posEstimator.est.aglVel * 100.0F));
+    DEBUG_SET(DEBUG_EST_POS, 7, posEstimator.surface.reliability * 100000);
+    // Since epv seems to depend mostly on baro/gps I will send the surface.reliability instead.
+    // epv:Standard deviation of vertical position error, (metres)
+
 #else
     UNUSED(ctx);
     posEstimator.est.aglAlt = posEstimator.est.pos.z;
