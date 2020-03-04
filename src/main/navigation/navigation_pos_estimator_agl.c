@@ -93,14 +93,8 @@ void updatePositionEstimator_SurfaceTopic(timeUs_t currentTimeUs, float newSurfa
 
 void estimationCalculateAGL(estimationContext_t * ctx)
 {
-#if defined(USE_RANGEFINDER) && defined(USE_BARO)
-    /*
-        Why do we need barometer for surface?
-        - because it falls back to it if SURFACE_QUAL_LOW, but if the test below is false it
-        will update agl stuff as if SURFACE_QUAL_LOW?!?!? In the case EST_SURFACE_VALID is false
-        it should NOT update anything using alg, isn't it?
-    */
-    if ((ctx->newFlags & EST_SURFACE_VALID) && (ctx->newFlags & EST_BARO_VALID)) {
+#if defined(USE_RANGEFINDER)
+    if (ctx->newFlags & EST_SURFACE_VALID) {
         navAGLEstimateQuality_e newAglQuality = posEstimator.est.aglQual;
         bool resetSurfaceEstimate = false;
         switch (posEstimator.est.aglQual) {

@@ -489,7 +489,7 @@ static uint32_t calculateCurrentValidityFlags(timeUs_t currentTimeUs)
 
     if (sensors(SENSOR_RANGEFINDER) && ((currentTimeUs - posEstimator.surface.lastUpdateTime) <= MS2US(INAV_SURFACE_TIMEOUT_MS))) {
         newFlags |= EST_SURFACE_VALID;
-        newFlags |= EST_BARO_VALID; // This is a hack tying to enable rangefinder only...
+        // newFlags |= EST_BARO_VALID; // This is a hack tying to enable rangefinder only...
     }
 
     if (sensors(SENSOR_OPFLOW) && posEstimator.flow.isValid && ((currentTimeUs - posEstimator.flow.lastUpdateTime) <= MS2US(INAV_FLOW_TIMEOUT_MS))) {
@@ -544,7 +544,29 @@ static void estimationPredict(estimationContext_t * ctx)
 
 static bool estimationCalculateCorrection_Z(estimationContext_t * ctx)
 {
-    if (ctx->newFlags & EST_BARO_VALID) {
+    // Now the priority is given to the surface (sonar / rangefinder) if reliable
+    if ((ctx->newFlags & EST_SURFACE_VALID) && (posEstimator.surface.reliability >= RANGEFINDER_RELIABILITY_LOW_THRESHOLD)){
+
+        // We might be experiencing air cushion effect - use sonar altitude to detect it
+        bool isAirCushionEffectDetected = ARMING_FLAG(ARMED) && (posEstimator.surface.alt < 20.0f);
+
+        const float rangefinderAltResidual = posEstimator.surface.alt - posEstimator.est.pos.z;
+        ctx->estPosCorr.z += rangefinderAltResidual * positionEstimationConfig()->w_z_surface_p * ctx->dt;
+        ctx->estVelCorr.z += rangefinderAltResidual * sq(positionEstimationConfig()->w_z_surface_p) * ctx->dt;
+        // Accelerometer bias
+        if (!isAirCushionEffectDetected) {
+            ctx->accBiasCorr.z -= rangefinderAltResidual * sq(positionEstimationConfig()->w_z_surface_p);
+        }
+
+        // Considering the rangefinder, when reliable, is 10x better than baro.
+        const float rangefinder_epv = positionEstimationConfig()->baro_epv/10.0;
+        ctx->newEPV = updateEPE(posEstimator.est.epv, ctx->dt, rangefinder_epv, positionEstimationConfig()->w_z_surface_p);
+
+        // Here GPS is not used because it would be way less precise anyway...
+
+        return true;
+    }
+    else if (ctx->newFlags & EST_BARO_VALID) {
         timeUs_t currentTimeUs = micros();
 
         if (!ARMING_FLAG(ARMED)) {
@@ -566,44 +588,20 @@ static bool estimationCalculateCorrection_Z(estimationContext_t * ctx)
         // We might be experiencing air cushion effect - use sonar or baro groung altitude to detect it
         bool isAirCushionEffectDetected = ARMING_FLAG(ARMED) &&
                                             (((ctx->newFlags & EST_SURFACE_VALID) && posEstimator.surface.alt < 20.0f && posEstimator.state.isBaroGroundValid) ||
-                                             ((ctx->newFlags & EST_BARO_VALID) && posEstimator.state.isBaroGroundValid && posEstimator.baro.alt < posEstimator.state.baroGroundAlt));
+                                            ((ctx->newFlags & EST_BARO_VALID) && posEstimator.state.isBaroGroundValid && posEstimator.baro.alt < posEstimator.state.baroGroundAlt));
 
-        //
-        // Altitude correction using barometer
-        // NAV_POSHOLD will not use the rangefinder... maybe this is not necessary if using ALTHOLD+SURFACE
-        //
-        if (sensors(SENSOR_BARO)) { //FIXME: change to something faster than sensors(SENSOR_BARO)...
-            // w_z_baro_p comes from inav_w_z_baro_p and it's only really used here (besides MSP output / fc_msp.c)
-            const float baroAltResidual = (isAirCushionEffectDetected ? posEstimator.state.baroGroundAlt : posEstimator.baro.alt) - posEstimator.est.pos.z;
-            ctx->estPosCorr.z += baroAltResidual * positionEstimationConfig()->w_z_baro_p * ctx->dt;
-            ctx->estVelCorr.z += baroAltResidual * sq(positionEstimationConfig()->w_z_baro_p) * ctx->dt;
+        // w_z_baro_p comes from inav_w_z_baro_p and it's only really used here (besides MSP output / fc_msp.c)
+        const float baroAltResidual = (isAirCushionEffectDetected ? posEstimator.state.baroGroundAlt : posEstimator.baro.alt) - posEstimator.est.pos.z;
+        ctx->estPosCorr.z += baroAltResidual * positionEstimationConfig()->w_z_baro_p * ctx->dt;
+        ctx->estVelCorr.z += baroAltResidual * sq(positionEstimationConfig()->w_z_baro_p) * ctx->dt;
 
-            // Accelerometer bias
-            if (!isAirCushionEffectDetected) {
-                ctx->accBiasCorr.z -= baroAltResidual * sq(positionEstimationConfig()->w_z_baro_p);
-            }
-
-            ctx->newEPV = updateEPE(posEstimator.est.epv, ctx->dt, posEstimator.baro.epv, positionEstimationConfig()->w_z_baro_p);
+        // Accelerometer bias
+        if (!isAirCushionEffectDetected) {
+            ctx->accBiasCorr.z -= baroAltResidual * sq(positionEstimationConfig()->w_z_baro_p);
         }
 
-        //
-        // Could something like this be used for NAV_POSHOLD when there's no BARO and only FLOW+TOF???????
-        //
-        if (sensors(SENSOR_RANGEFINDER) && (posEstimator.surface.reliability >= RANGEFINDER_RELIABILITY_LOW_THRESHOLD)){
-            const float rangefinderAltResidual = posEstimator.surface.alt - posEstimator.est.pos.z;
-            ctx->estPosCorr.z += rangefinderAltResidual * positionEstimationConfig()->w_z_surface_p * ctx->dt;
-            ctx->estVelCorr.z += rangefinderAltResidual * sq(positionEstimationConfig()->w_z_surface_p) * ctx->dt;
-            // Accelerometer bias
-            if (!isAirCushionEffectDetected) {
-                ctx->accBiasCorr.z -= rangefinderAltResidual * sq(positionEstimationConfig()->w_z_surface_p);
-            }
-
-            // Considering the rangefinder, when reliable, is 10x better than baro.
-            const float rangefinder_epv = positionEstimationConfig()->baro_epv/10.0;
-            ctx->newEPV = updateEPE(posEstimator.est.epv, ctx->dt, rangefinder_epv, positionEstimationConfig()->w_z_surface_p);
-
-        }
-
+        ctx->newEPV = updateEPE(posEstimator.est.epv, ctx->dt, posEstimator.baro.epv, positionEstimationConfig()->w_z_baro_p);
+        
         // If GPS is available - also use GPS climb rate
         if (ctx->newFlags & EST_GPS_Z_VALID) {
             // Trust GPS velocity only if residual/error is less than 2.5 m/s, scale weight according to gaussian distribution
@@ -612,7 +610,7 @@ static bool estimationCalculateCorrection_Z(estimationContext_t * ctx)
             ctx->estVelCorr.z += gpsRocResidual * positionEstimationConfig()->w_z_gps_v * gpsRocScaler * ctx->dt;
         }
 
-        return true;
+        return true;    
     }
     else if (STATE(FIXED_WING) && (ctx->newFlags & EST_GPS_Z_VALID)) {
         // If baro is not available - use GPS Z for correction on a plane
