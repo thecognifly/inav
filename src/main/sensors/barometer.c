@@ -270,6 +270,8 @@ uint32_t baroUpdate(void)
     }
 }
 
+// Considering the equation altitudeToPressure is in cm, this one also
+// returns values in cm...
 static float pressureToAltitude(const float pressure)
 {
     return (1.0f - powf(pressure / 101325.0f, 0.190295f)) * 4433000.0f;

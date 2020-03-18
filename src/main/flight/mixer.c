@@ -328,6 +328,9 @@ void FAST_CODE NOINLINE mixTable(const float dT)
         mixerThrottleCommand = constrain(globalFunctionValues[GLOBAL_FUNCTION_ACTION_OVERRIDE_THROTTLE], throttleMin, throttleMax); 
     } else
 #endif
+    //
+    // Here is where rcCommand[THROTTLE] is converted into motor commands
+    //
     if (feature(FEATURE_3D)) {
         if (!ARMING_FLAG(ARMED)) throttlePrevious = PWM_RANGE_MIDDLE; // When disarmed set to mid_rc. It always results in positive direction after arming.
 
