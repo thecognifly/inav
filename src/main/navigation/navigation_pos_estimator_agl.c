@@ -90,8 +90,8 @@ void updatePositionEstimator_SurfaceTopic(timeUs_t currentTimeUs, float newSurfa
 
 void estimationCalculateAGL(estimationContext_t * ctx)
 {
-#if defined(USE_RANGEFINDER) && defined(USE_BARO)
-    if ((ctx->newFlags & EST_SURFACE_VALID) && (ctx->newFlags & EST_BARO_VALID)) {
+#if defined(USE_RANGEFINDER)
+    if (ctx->newFlags & EST_SURFACE_VALID) {
         navAGLEstimateQuality_e newAglQuality = posEstimator.est.aglQual;
         bool resetSurfaceEstimate = false;
         switch (posEstimator.est.aglQual) {
