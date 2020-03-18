@@ -187,11 +187,16 @@ void initActiveBoxIds(void)
     activeBoxIds[activeBoxIdCount++] = BOXCAMSTAB;
 
 #ifdef USE_GPS
-    if (sensors(SENSOR_BARO) || (STATE(FIXED_WING) && feature(FEATURE_GPS))) {
+    // To enable Surface or Altitude Hold it's necessary to have something
+    // to measure the altitude like barometer, GPS or sonar / rangefinder.
+    if (sensors(SENSOR_BARO) || (STATE(FIXED_WING) && feature(FEATURE_GPS)) 
+                             || sensors(SENSOR_RANGEFINDER)) {
         activeBoxIds[activeBoxIdCount++] = BOXNAVALTHOLD;
         activeBoxIds[activeBoxIdCount++] = BOXSURFACE;
     }
 
+    // To enable Position Hold it's necessary to have in addition to an accellerometer
+    // a GPS or Optical Flow sensor.
     const bool navReadyQuads = !STATE(FIXED_WING) && (getHwCompassStatus() != HW_SENSOR_NONE) && sensors(SENSOR_ACC) && feature(FEATURE_GPS);
     const bool navReadyPlanes = STATE(FIXED_WING) && sensors(SENSOR_ACC) && feature(FEATURE_GPS);
     const bool navFlowDeadReckoning = sensors(SENSOR_OPFLOW) && sensors(SENSOR_ACC) && positionEstimationConfig()->allow_dead_reckoning;
