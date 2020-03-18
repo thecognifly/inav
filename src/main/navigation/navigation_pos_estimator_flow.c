@@ -67,21 +67,22 @@ bool estimationCalculateCorrection_XY_FLOW(estimationContext_t * ctx)
     if (!((ctx->newFlags & EST_FLOW_VALID) && (ctx->newFlags & EST_SURFACE_VALID) && (ctx->newFlags & EST_Z_VALID))) {
         return false;
     }
-
-    // FIXME: flow may use AGL estimate if available
-    const bool canUseFlow = (posEstimator.surface.reliability >= RANGEFINDER_RELIABILITY_LOW_THRESHOLD);
-
-    if (!canUseFlow) {
-        return false;
-    }
+    fpVector3_t flowVel;
 
     // Calculate linear velocity based on angular velocity and altitude
     // Technically we should calculate arc length here, but for fast sampling this is accurate enough
-    fpVector3_t flowVel = {
-        .x = - (posEstimator.flow.flowRate[Y] - posEstimator.flow.bodyRate[Y]) * posEstimator.surface.alt,
-        .y =   (posEstimator.flow.flowRate[X] - posEstimator.flow.bodyRate[X]) * posEstimator.surface.alt,
-        .z =    posEstimator.est.vel.z
-    };
+    if (posEstimator.est.aglQual >= SURFACE_QUAL_MID){
+        flowVel.x = - (posEstimator.flow.flowRate[Y] - posEstimator.flow.bodyRate[Y]) * posEstimator.est.aglAlt;
+        flowVel.y =   (posEstimator.flow.flowRate[X] - posEstimator.flow.bodyRate[X]) * posEstimator.est.aglAlt;
+        flowVel.z =    posEstimator.est.vel.z;
+    } else if (posEstimator.surface.reliability >= RANGEFINDER_RELIABILITY_LOW_THRESHOLD){
+        flowVel.x = - (posEstimator.flow.flowRate[Y] - posEstimator.flow.bodyRate[Y]) * posEstimator.surface.alt;
+        flowVel.y =   (posEstimator.flow.flowRate[X] - posEstimator.flow.bodyRate[X]) * posEstimator.surface.alt;
+        flowVel.z =    posEstimator.est.vel.z;
+    } else
+    {
+        return false;
+    }
 
     // At this point flowVel will hold linear velocities in earth frame
     imuTransformVectorBodyToEarth(&flowVel);
@@ -90,6 +91,9 @@ bool estimationCalculateCorrection_XY_FLOW(estimationContext_t * ctx)
     const float flowVelXInnov = flowVel.x - posEstimator.est.vel.x;
     const float flowVelYInnov = flowVel.y - posEstimator.est.vel.y;
 
+    //
+    // Velocity correction using the optical flow
+    //
     ctx->estVelCorr.x = flowVelXInnov * positionEstimationConfig()->w_xy_flow_v * ctx->dt;
     ctx->estVelCorr.y = flowVelYInnov * positionEstimationConfig()->w_xy_flow_v * ctx->dt;
 
@@ -105,7 +109,10 @@ bool estimationCalculateCorrection_XY_FLOW(estimationContext_t * ctx)
 
         const float flowResidualX = posEstimator.est.flowCoordinates[X] - posEstimator.est.pos.x;
         const float flowResidualY = posEstimator.est.flowCoordinates[Y] - posEstimator.est.pos.y;
-
+        
+        //
+        // Here the position estimation is corrected based on the optical flow
+        //
         ctx->estPosCorr.x = flowResidualX * positionEstimationConfig()->w_xy_flow_p * ctx->dt;
         ctx->estPosCorr.y = flowResidualY * positionEstimationConfig()->w_xy_flow_p * ctx->dt;
 
@@ -116,6 +123,9 @@ bool estimationCalculateCorrection_XY_FLOW(estimationContext_t * ctx)
     DEBUG_SET(DEBUG_FLOW, 1, RADIANS_TO_DEGREES(posEstimator.flow.flowRate[Y]));
     DEBUG_SET(DEBUG_FLOW, 2, posEstimator.est.flowCoordinates[X]);
     DEBUG_SET(DEBUG_FLOW, 3, posEstimator.est.flowCoordinates[Y]);
+    DEBUG_SET(DEBUG_FLOW, 4, posEstimator.est.pos.x);
+    DEBUG_SET(DEBUG_FLOW, 5, posEstimator.est.pos.y);
+    DEBUG_SET(DEBUG_FLOW, 6, posEstimator.est.pos.z);
 
     // All variables return are floats, so keep that in mind when unwrapping.
     DEBUG_SET(DEBUG_EST_POS, 0, ((posEstimator.est.pos.x+ctx->estPosCorr.x) * 100.0F));
