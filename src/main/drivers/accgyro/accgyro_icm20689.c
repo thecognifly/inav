@@ -102,13 +102,21 @@ static void icm20689AccAndGyroInit(gyroDev_t *gyro)
     delay(100);
     busWrite(busDev, MPU_RA_PWR_MGMT_1, INV_CLK_PLL);
     delay(15);
-    busWrite(busDev, MPU_RA_GYRO_CONFIG, INV_FSR_2000DPS << 3); // XXX
+    busWrite(busDev, MPU_RA_GYRO_CONFIG, INV_FSR_2000DPS << 3); // ADDR 0x1B: 00011000
     delay(15);
-    busWrite(busDev, MPU_RA_ACCEL_CONFIG, INV_FSR_16G << 3);
+    busWrite(busDev, MPU_RA_ACCEL_CONFIG, INV_FSR_16G << 3); // ADDR 0x1C: 00011000 (±2g (00), ±4g (01), ±8g (10), ±16g (11))
     delay(15);
-    busWrite(busDev, MPU_RA_CONFIG, config->gyroConfigValues[0]);
+    busWrite(busDev, MPU_RA_CONFIG, config->gyroConfigValues[0]); // ADDR 0x1A: DLPF_CFG[2:0] => gyro at BW 250Hz
     delay(15);
-    busWrite(busDev, MPU_RA_SMPLRT_DIV, config->gyroConfigValues[1]); // Get Divider Drops
+    
+    // If MPU_RA_FF_THR is zero by default, if means the acc is using A_DLPF_CFG = 0 and BW = 218.1Hz
+    // busWrite(busDev, MPU_RA_FF_THR, 1 << 3); // ADDR 0x1D: ACCEL_FCHOICE_B=1, disables A_DLPF_CFG  and BW = 1046Hz
+    // delay(15);
+
+    busWrite(busDev, MPU_RA_SMPLRT_DIV, config->gyroConfigValues[1]); // ADDR 0x19:
+                                                                      // Get Divider Drops
+                                                                      // SAMPLE_RATE = 1kHz / (1 + SMPLRT_DIV)
+                                                                      // SAMPLE_RATE = 500Hz
     delay(100);
 
     // Data ready interrupt configuration
