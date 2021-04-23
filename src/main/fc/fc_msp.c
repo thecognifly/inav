@@ -109,6 +109,7 @@
 #include "sensors/gyro.h"
 #include "sensors/opflow.h"
 #include "sensors/temperature.h"
+#include "sensors/mocap.h"
 
 #include "telemetry/telemetry.h"
 
@@ -123,6 +124,17 @@ static const char * const boardIdentifier = TARGET_BOARD_IDENTIFIER;
 
 // from mixer.c
 extern int16_t motor_disarmed[MAX_SUPPORTED_MOTORS];
+
+// it should be moved to its own .c file in the future...
+__mocap_received_values_t mocap_received_values_t = {
+    .valid = false,
+    .reading = false,
+    .counter = 0, 
+    .X = 0,
+    .Y = 0,
+    .Z = 0,
+    .YAW = 0
+};
 
 static const char pidnames[] =
     "ROLL;"
@@ -1542,6 +1554,25 @@ static mspResult_e mspFcProcessInCommand(uint16_t cmdMSP, sbuf_t *src)
     const unsigned int dataSize = sbufBytesRemaining(src);
 
     switch (cmdMSP) {
+
+    // X,Y,Z,YAW,counter
+    case MSP_MOCAP:
+        if ((dataSize == 5 * sizeof(uint16_t)) && (!mocap_received_values_t.reading)) {
+            const uint16_t counter = sbufReadU16(src);
+            if (counter > mocap_received_values_t.counter) {
+                mocap_received_values_t.counter = counter;
+            }else{
+                return MSP_RESULT_ERROR;
+            }
+            mocap_received_values_t.X = sbufReadU16(src);
+            mocap_received_values_t.Y = sbufReadU16(src);
+            mocap_received_values_t.Z = sbufReadU16(src);
+            mocap_received_values_t.YAW = sbufReadU16(src);
+            mocap_received_values_t.valid = 1;
+        } else
+            return MSP_RESULT_ERROR;
+        break;
+
     case MSP_SELECT_SETTING:
         if (sbufReadU8Safe(&tmp_u8, src) && (!ARMING_FLAG(ARMED)))
             setConfigProfileAndWriteEEPROM(tmp_u8);

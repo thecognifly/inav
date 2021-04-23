@@ -76,5 +76,6 @@ typedef enum {
     DEBUG_FFT_FREQ,
     DEBUG_ERPM,
     DEBUG_EST_POS, // used to output posEstimator.est.pos from navigation_pos_estimator_flow.c
+    DEBUG_MOCAP, // used to output received values from MOCAP
     DEBUG_COUNT
 } debugType_e;
