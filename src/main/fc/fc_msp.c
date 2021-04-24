@@ -1557,10 +1557,10 @@ static mspResult_e mspFcProcessInCommand(uint16_t cmdMSP, sbuf_t *src)
 
     // X,Y,Z,YAW,counter
     case MSP_MOCAP:
-        if ((dataSize == 5 * sizeof(uint16_t)) && (!mocap_received_values_t.reading)) {
-            const uint16_t counter = sbufReadU16(src);
-            if (counter > mocap_received_values_t.counter) {
-                mocap_received_values_t.counter = counter;
+        if ((dataSize >= 5 * sizeof(uint16_t)) && (!mocap_received_values_t.reading)) {
+            tmp_u16 = sbufReadU16(src);
+            if (tmp_u16 > mocap_received_values_t.counter) {
+                mocap_received_values_t.counter = tmp_u16;
             }else{
                 return MSP_RESULT_ERROR;
             }
