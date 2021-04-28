@@ -789,6 +789,9 @@ static void updateEstimatedTopic(timeUs_t currentTimeUs)
         ctx.estVelCorr.z = (0.0f - posEstimator.est.vel.z) * positionEstimationConfig()->w_z_res_v * ctx.dt;
     }
 
+    //
+    // Apply corrections
+    //
     //if we have valid mocap readings, we give mocap higher weight in the position estimation
     if (mocap_received_values_t.valid){
         mocap_received_values_t.reading = true; // indicates we are reading the data
@@ -798,18 +801,27 @@ static void updateEstimatedTopic(timeUs_t currentTimeUs)
         // mocap_received_values_t.X;
         // mocap_received_values_t.Y;
         // mocap_received_values_t.Z;
+        posEstimator.est.pos.x = posEstimator.mocap.pos.x;
+        posEstimator.est.pos.y = posEstimator.mocap.pos.y;
+        posEstimator.est.pos.z = posEstimator.mocap.pos.z;
+
+        posEstimator.est.vel.x = posEstimator.mocap.vel.x;
+        posEstimator.est.vel.y = posEstimator.mocap.vel.y;
+        posEstimator.est.vel.z = posEstimator.mocap.vel.z;
 
         mocap_received_values_t.valid = false; // always set it to false after reading
         mocap_received_values_t.reading = false; // allows new messages to be received
     }
+    else
+    {
+        vectorAdd(&posEstimator.est.pos, &posEstimator.est.pos, &ctx.estPosCorr);
+        vectorAdd(&posEstimator.est.vel, &posEstimator.est.vel, &ctx.estVelCorr);
+    }
 
 
-    //
-    // Apply corrections
-    //
-    vectorAdd(&posEstimator.est.pos, &posEstimator.est.pos, &ctx.estPosCorr);
-    vectorAdd(&posEstimator.est.vel, &posEstimator.est.vel, &ctx.estVelCorr);
+    
 
+    
     /* Correct accelerometer bias */
     if (positionEstimationConfig()->w_acc_bias > 0.0f) {
         const float accelBiasCorrMagnitudeSq = sq(ctx.accBiasCorr.x) + sq(ctx.accBiasCorr.y) + sq(ctx.accBiasCorr.z);
