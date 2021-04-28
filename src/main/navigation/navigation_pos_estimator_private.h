@@ -77,6 +77,12 @@ typedef struct {
 
 typedef struct {
     timeUs_t    lastUpdateTime; // Last update time (us)
+    fpVector3_t pos;            // GPS position in NEU coordinate system (cm)
+    fpVector3_t vel;            // GPS velocity (cms)
+} navPositionEstimatorMOCAP_t;
+
+typedef struct {
+    timeUs_t    lastUpdateTime; // Last update time (us)
     pt1Filter_t avgFilter;
     float       alt;            // Raw barometric altitude (cm)
     float       epv;
@@ -162,6 +168,7 @@ typedef struct {
     navPositionEstimatorSURFACE_t surface;
     navPositionEstimatorPITOT_t pitot;
     navPositionEstimatorFLOW_t  flow;
+    navPositionEstimatorMOCAP_t mocap;
 
     // IMU data
     navPosisitonEstimatorIMU_t  imu;

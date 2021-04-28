@@ -88,6 +88,8 @@
 #define USE_PITOT
 #define USE_PITOT_MS4525
 
+#define USE_MOCAP
+
 #define USE_1WIRE
 #define USE_1WIRE_DS2482
 
