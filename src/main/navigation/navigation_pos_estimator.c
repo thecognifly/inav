@@ -185,6 +185,7 @@ static bool detectGPSGlitch(timeUs_t currentTimeUs)
  * Update GPS topic
  *  Function is called on each GPS update
  */
+
 void onNewGPSData(void)
 {
     static timeUs_t lastGPSNewDataTime;
@@ -294,6 +295,44 @@ void onNewGPSData(void)
         posEstimator.gps.lastUpdateTime = 0;
     }
 }
+#endif
+
+#if defined USE_MOCAP
+void onNewMOCAP(void)
+{
+    static timeUs_t lastMOCAPNewDataTime;
+    static int32_t previousX = 0;
+    static int32_t previousY = 0;
+    static int32_t previousZ = 0;
+    const timeUs_t currentTimeUs = micros();
+    static bool first_reading_flag = true;
+    if (mocap_received_values_t.valid){
+
+        //assigning positions to the mocap posEstimator module
+        posEstimator.mocap.pos.x = mocap_received_values_t.X;
+        posEstimator.mocap.pos.y = mocap_received_values_t.Y;
+        posEstimator.mocap.pos.z = mocap_received_values_t.Z;
+
+        //estiamting the movement velocity
+        if(previousX == 0 && previousY == 0 && previousZ == 0)
+        {
+            previousX = posEstimator.mocap.pos.x;
+            previousY = posEstimator.mocap.pos.y;
+            previousZ = posEstimator.mocap.pos.z;
+            first_reading_flag = false;
+        }
+        // float dT = US2S(getGPSDeltaTimeFilter(currentTimeUs - lastMOCAPNewDataTime));
+        float dT = US2S(currentTimeUs - lastMOCAPNewDataTime);
+        posEstimator.mocap.vel.x = (posEstimator.mocap.pos.x-previousX)/dT;
+        posEstimator.mocap.vel.y = (posEstimator.mocap.pos.y-previousY)/dT;
+        posEstimator.mocap.vel.z = (posEstimator.mocap.pos.z-previousZ)/dT;
+
+        previousX = posEstimator.mocap.vel.x;
+        previousY = posEstimator.mocap.vel.y;
+        previousZ = posEstimator.mocap.vel.z;
+    }
+}
+
 #endif
 
 #if defined(USE_BARO)
@@ -468,7 +507,7 @@ static bool navIsHeadingUsable(void)
     }
 }
 
-static uint32_t calculateCurrentValidityFlags(timeUs_t currentTimeUs)
+static uint32_t calculateCurrentValidityFlags(timeUs_t currentTimeUs)//probably we can use this for assessing the validity of mocap readings?
 {
     /* Figure out if we have valid position data from our data sources */
     uint32_t newFlags = 0;
@@ -766,9 +805,36 @@ static void updateEstimatedTopic(timeUs_t currentTimeUs)
     //
     // Apply corrections
     //
-    vectorAdd(&posEstimator.est.pos, &posEstimator.est.pos, &ctx.estPosCorr);
-    vectorAdd(&posEstimator.est.vel, &posEstimator.est.vel, &ctx.estVelCorr);
+    //if we have valid mocap readings, we give mocap higher weight in the position estimation
+    if (mocap_received_values_t.valid){
+        mocap_received_values_t.reading = true; // indicates we are reading the data
+        
+        // Apply corrections based on the optitrack values received
+        // See code above for inspiration...
+        // mocap_received_values_t.X;
+        // mocap_received_values_t.Y;
+        // mocap_received_values_t.Z;
+        posEstimator.est.pos.x = posEstimator.mocap.pos.x;
+        posEstimator.est.pos.y = posEstimator.mocap.pos.y;
+        posEstimator.est.pos.z = posEstimator.mocap.pos.z;
 
+        posEstimator.est.vel.x = posEstimator.mocap.vel.x;
+        posEstimator.est.vel.y = posEstimator.mocap.vel.y;
+        posEstimator.est.vel.z = posEstimator.mocap.vel.z;
+
+        mocap_received_values_t.valid = false; // always set it to false after reading
+        mocap_received_values_t.reading = false; // allows new messages to be received
+    }
+    else
+    {
+        vectorAdd(&posEstimator.est.pos, &posEstimator.est.pos, &ctx.estPosCorr);
+        vectorAdd(&posEstimator.est.vel, &posEstimator.est.vel, &ctx.estVelCorr);
+    }
+
+
+    
+
+    
     /* Correct accelerometer bias */
     if (positionEstimationConfig()->w_acc_bias > 0.0f) {
         const float accelBiasCorrMagnitudeSq = sq(ctx.accBiasCorr.x) + sq(ctx.accBiasCorr.y) + sq(ctx.accBiasCorr.z);
