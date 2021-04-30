@@ -789,6 +789,19 @@ static void updateEstimatedTopic(timeUs_t currentTimeUs)
         ctx.estVelCorr.z = (0.0f - posEstimator.est.vel.z) * positionEstimationConfig()->w_z_res_v * ctx.dt;
     }
 
+    if (mocap_received_values_t.valid){
+        mocap_received_values_t.reading = true; // indicates we are reading the data
+        
+        // Apply corrections based on the optitrack values received
+        // See code above for inspiration...
+        // mocap_received_values_t.X;
+        // mocap_received_values_t.Y;
+        // mocap_received_values_t.Z;
+
+        mocap_received_values_t.valid = false; // always set it to false after reading
+        mocap_received_values_t.reading = false; // allows new messages to be received
+    }
+
     //
     // Apply corrections
     //
