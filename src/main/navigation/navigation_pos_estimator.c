@@ -951,9 +951,14 @@ void FAST_CODE NOINLINE updatePositionEstimator(void)
     
     //DEBUG
     // All variables return are floats, so keep that in mind when unwrapping.
-    DEBUG_SET(DEBUG_MOCAP, 0, (mocap_received_values_t.X * 1.0F));
-    DEBUG_SET(DEBUG_MOCAP, 1, (mocap_received_values_t.Y * 1.0F));
-    DEBUG_SET(DEBUG_MOCAP, 2, (mocap_received_values_t.Z * 1.0F));
+    // DEBUG_SET(DEBUG_MOCAP, 0, (mocap_received_values_t.X * 1.0F));
+    // DEBUG_SET(DEBUG_MOCAP, 1, (mocap_received_values_t.Y * 1.0F));
+    // DEBUG_SET(DEBUG_MOCAP, 2, (mocap_received_values_t.Z * 1.0F));
+    // DEBUG_SET(DEBUG_MOCAP, 3, (mocap_received_values_t.YAW * 1.0F));
+
+    DEBUG_SET(DEBUG_MOCAP, 0, (posEstimator.est.pos.x * 1.0F));
+    DEBUG_SET(DEBUG_MOCAP, 1, (posEstimator.est.pos.y * 1.0F));
+    DEBUG_SET(DEBUG_MOCAP, 2, (posEstimator.est.pos.z * 1.0F));
     DEBUG_SET(DEBUG_MOCAP, 3, (mocap_received_values_t.YAW * 1.0F));
 
 }
