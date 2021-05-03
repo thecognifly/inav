@@ -39,6 +39,7 @@ extern bool autoThrottleManuallyIncreased;
 
 /* Navigation system updates */
 void onNewGPSData(void);
+void onNewMOCAP(void);
 
 #if defined(USE_NAV)
 #if defined(USE_BLACKBOX)

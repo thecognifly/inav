@@ -1569,6 +1569,7 @@ static mspResult_e mspFcProcessInCommand(uint16_t cmdMSP, sbuf_t *src)
             mocap_received_values_t.Z = sbufReadU16(src);
             mocap_received_values_t.YAW = sbufReadU16(src);
             mocap_received_values_t.valid = true;
+            onNewMOCAP();
         } else
             return MSP_RESULT_ERROR;
         break;

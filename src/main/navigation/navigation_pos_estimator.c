@@ -305,7 +305,7 @@ void onNewMOCAP(void)
     static int32_t previousY = 0;
     static int32_t previousZ = 0;
     const timeUs_t currentTimeUs = micros();
-    static bool first_reading_flag = true;
+    // static bool first_reading_flag = true;
     if (mocap_received_values_t.valid){
 
         //assigning positions to the mocap posEstimator module
@@ -319,7 +319,7 @@ void onNewMOCAP(void)
             previousX = posEstimator.mocap.pos.x;
             previousY = posEstimator.mocap.pos.y;
             previousZ = posEstimator.mocap.pos.z;
-            first_reading_flag = false;
+            // first_reading_flag = false;
         }
         // float dT = US2S(getGPSDeltaTimeFilter(currentTimeUs - lastMOCAPNewDataTime));
         float dT = US2S(currentTimeUs - lastMOCAPNewDataTime);
@@ -327,9 +327,9 @@ void onNewMOCAP(void)
         posEstimator.mocap.vel.y = (posEstimator.mocap.pos.y-previousY)/dT;
         posEstimator.mocap.vel.z = (posEstimator.mocap.pos.z-previousZ)/dT;
 
-        previousX = posEstimator.mocap.vel.x;
-        previousY = posEstimator.mocap.vel.y;
-        previousZ = posEstimator.mocap.vel.z;
+        previousX = posEstimator.mocap.pos.x;
+        previousY = posEstimator.mocap.pos.y;
+        previousZ = posEstimator.mocap.pos.z;
     }
 }
 
@@ -788,20 +788,6 @@ static void updateEstimatedTopic(timeUs_t currentTimeUs)
     if (!estZCorrectOk || ctx.newEPV > positionEstimationConfig()->max_eph_epv) {
         ctx.estVelCorr.z = (0.0f - posEstimator.est.vel.z) * positionEstimationConfig()->w_z_res_v * ctx.dt;
     }
-
-    if (mocap_received_values_t.valid){
-        mocap_received_values_t.reading = true; // indicates we are reading the data
-        
-        // Apply corrections based on the optitrack values received
-        // See code above for inspiration...
-        // mocap_received_values_t.X;
-        // mocap_received_values_t.Y;
-        // mocap_received_values_t.Z;
-
-        mocap_received_values_t.valid = false; // always set it to false after reading
-        mocap_received_values_t.reading = false; // allows new messages to be received
-    }
-
     //
     // Apply corrections
     //
@@ -814,9 +800,14 @@ static void updateEstimatedTopic(timeUs_t currentTimeUs)
         // mocap_received_values_t.X;
         // mocap_received_values_t.Y;
         // mocap_received_values_t.Z;
+
         posEstimator.est.pos.x = posEstimator.mocap.pos.x;
         posEstimator.est.pos.y = posEstimator.mocap.pos.y;
         posEstimator.est.pos.z = posEstimator.mocap.pos.z;
+
+        // posEstimator.est.pos.x = mocap_received_values_t.X;
+        // posEstimator.est.pos.y = mocap_received_values_t.Y;
+        // posEstimator.est.pos.z = mocap_received_values_t.Z;
 
         posEstimator.est.vel.x = posEstimator.mocap.vel.x;
         posEstimator.est.vel.y = posEstimator.mocap.vel.y;
@@ -917,6 +908,7 @@ void initializePositionEstimator(void)
     posEstimator.gps.lastUpdateTime = 0;
     posEstimator.baro.lastUpdateTime = 0;
     posEstimator.surface.lastUpdateTime = 0;
+    posEstimator.mocap.lastUpdateTime = 0;
 
     posEstimator.est.aglAlt = 0;
     posEstimator.est.aglVel = 0;
