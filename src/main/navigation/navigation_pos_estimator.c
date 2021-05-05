@@ -300,7 +300,7 @@ void onNewGPSData(void)
 #if defined USE_MOCAP
 void onNewMOCAP(void)
 {
-    static timeUs_t lastMOCAPNewDataTime;
+    static timeUs_t lastMOCAPNewDataTime = 0;
     static int32_t previousX = 0;
     static int32_t previousY = 0;
     static int32_t previousZ = 0;
@@ -312,7 +312,7 @@ void onNewMOCAP(void)
         posEstimator.mocap.pos.x = mocap_received_values_t.X;
         posEstimator.mocap.pos.y = mocap_received_values_t.Y;
         posEstimator.mocap.pos.z = mocap_received_values_t.Z;
-
+        posEstimator.mocap.yaw = mocap_received_values_t.YAW;
         //estiamting the movement velocity
         if(previousX == 0 && previousY == 0 && previousZ == 0)
         {
@@ -767,7 +767,7 @@ static void updateEstimatedTopic(timeUs_t currentTimeUs)
     estimationCalculateAGL(&ctx);
 
     /* Prediction stage: X,Y,Z */
-    estimationPredict(&ctx);
+    // estimationPredict(&ctx);
 
     /* Correction stage: Z */
     const bool estZCorrectOk =
@@ -775,9 +775,9 @@ static void updateEstimatedTopic(timeUs_t currentTimeUs)
 
     /* Correction stage: XY: GPS, FLOW */
     // FIXME: Handle transition from FLOW to GPS and back - seamlessly fly indoor/outdoor
-    const bool estXYCorrectOk =
-        estimationCalculateCorrection_XY_GPS(&ctx) ||
-        estimationCalculateCorrection_XY_FLOW(&ctx);
+    // const bool estXYCorrectOk =
+    //     estimationCalculateCorrection_XY_GPS(&ctx) ||
+    //     estimationCalculateCorrection_XY_FLOW(&ctx);
 
     // If we can't apply correction or accuracy is off the charts - decay velocity to zero
     if (!estXYCorrectOk || ctx.newEPH > positionEstimationConfig()->max_eph_epv) {
@@ -804,7 +804,7 @@ static void updateEstimatedTopic(timeUs_t currentTimeUs)
         posEstimator.est.pos.x = posEstimator.mocap.pos.x;
         posEstimator.est.pos.y = posEstimator.mocap.pos.y;
         posEstimator.est.pos.z = posEstimator.mocap.pos.z;
-
+        attitude.values.yaw = mocap_received_values_t.YAW;// posEstimator.mocap.yaw;
         // posEstimator.est.pos.x = mocap_received_values_t.X;
         // posEstimator.est.pos.y = mocap_received_values_t.Y;
         // posEstimator.est.pos.z = mocap_received_values_t.Z;
@@ -964,7 +964,7 @@ void FAST_CODE NOINLINE updatePositionEstimator(void)
     DEBUG_SET(DEBUG_MOCAP, 0, (posEstimator.est.pos.x * 1.0F));
     DEBUG_SET(DEBUG_MOCAP, 1, (posEstimator.est.pos.y * 1.0F));
     DEBUG_SET(DEBUG_MOCAP, 2, (posEstimator.est.pos.z * 1.0F));
-    DEBUG_SET(DEBUG_MOCAP, 3, (mocap_received_values_t.YAW * 1.0F));
+    DEBUG_SET(DEBUG_MOCAP, 3, (attitude.values.yaw * 1.0F));
 
 }
 
