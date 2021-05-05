@@ -780,14 +780,14 @@ static void updateEstimatedTopic(timeUs_t currentTimeUs)
     //     estimationCalculateCorrection_XY_FLOW(&ctx);
 
     // If we can't apply correction or accuracy is off the charts - decay velocity to zero
-    if (!estXYCorrectOk || ctx.newEPH > positionEstimationConfig()->max_eph_epv) {
-        ctx.estVelCorr.x = (0.0f - posEstimator.est.vel.x) * positionEstimationConfig()->w_xy_res_v * ctx.dt;
-        ctx.estVelCorr.y = (0.0f - posEstimator.est.vel.y) * positionEstimationConfig()->w_xy_res_v * ctx.dt;
-    }
+    // if (!estXYCorrectOk || ctx.newEPH > positionEstimationConfig()->max_eph_epv) {
+    //     ctx.estVelCorr.x = (0.0f - posEstimator.est.vel.x) * positionEstimationConfig()->w_xy_res_v * ctx.dt;
+    //     ctx.estVelCorr.y = (0.0f - posEstimator.est.vel.y) * positionEstimationConfig()->w_xy_res_v * ctx.dt;
+    // }
 
-    if (!estZCorrectOk || ctx.newEPV > positionEstimationConfig()->max_eph_epv) {
-        ctx.estVelCorr.z = (0.0f - posEstimator.est.vel.z) * positionEstimationConfig()->w_z_res_v * ctx.dt;
-    }
+    // if (!estZCorrectOk || ctx.newEPV > positionEstimationConfig()->max_eph_epv) {
+    //     ctx.estVelCorr.z = (0.0f - posEstimator.est.vel.z) * positionEstimationConfig()->w_z_res_v * ctx.dt;
+    // }
     //
     // Apply corrections
     //
