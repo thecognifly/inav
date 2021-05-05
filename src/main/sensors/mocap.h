@@ -13,6 +13,7 @@ typedef struct {
     int16_t Y;
     int16_t Z;
     int16_t YAW;
+    timeUs_t lastUpdateTime;
 } __mocap_received_values_t;
 
 

@@ -133,7 +133,8 @@ __mocap_received_values_t mocap_received_values_t = {
     .X = 0,
     .Y = 0,
     .Z = 0,
-    .YAW = 0
+    .YAW = 0,
+    .lastUpdateTime = 0
 };
 
 static const char pidnames[] =
@@ -1571,6 +1572,7 @@ static mspResult_e mspFcProcessInCommand(uint16_t cmdMSP, sbuf_t *src)
             mocap_received_values_t.Z = sbufReadU16(src);
             mocap_received_values_t.YAW = sbufReadU16(src);
             mocap_received_values_t.valid = true;
+            mocap_received_values_t.lastUpdateTime = micros();
             sensorsSet(SENSOR_MOCAP); //just copying the behaviour from SET_RAW_GPS
             onNewMOCAP();
         } else

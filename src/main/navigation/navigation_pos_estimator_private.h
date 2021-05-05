@@ -78,8 +78,10 @@ typedef struct {
 typedef struct {
     timeUs_t    lastUpdateTime; // Last update time (us)
     fpVector3_t pos;
-    float yaw;            // GPS position in NEU coordinate system (cm)
-    fpVector3_t vel;            // GPS velocity (cms)
+    float yaw;                  // (cm)
+    fpVector3_t vel;            // (cms)
+    float       eph;
+    float       epv;
 } navPositionEstimatorMOCAP_t;
 
 typedef struct {
@@ -151,6 +153,7 @@ typedef enum {
     EST_FLOW_VALID              = (1 << 4),
     EST_XY_VALID                = (1 << 5),
     EST_Z_VALID                 = (1 << 6),
+    EST_MOCAP_VALID             = (1 << 7),
 } navPositionEstimationFlags_e;
 
 typedef struct {

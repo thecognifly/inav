@@ -300,11 +300,11 @@ void onNewGPSData(void)
 #if defined USE_MOCAP
 void onNewMOCAP(void)
 {
-    static timeUs_t lastMOCAPNewDataTime = 0;
+    static timeUs_t lastUpdateTime = 0;
     static int32_t previousX = 0;
     static int32_t previousY = 0;
     static int32_t previousZ = 0;
-    const timeUs_t currentTimeUs = micros();
+
     // static bool first_reading_flag = true;
     if (mocap_received_values_t.valid){
 
@@ -313,16 +313,19 @@ void onNewMOCAP(void)
         posEstimator.mocap.pos.y = mocap_received_values_t.Y;
         posEstimator.mocap.pos.z = mocap_received_values_t.Z;
         posEstimator.mocap.yaw = mocap_received_values_t.YAW;
+        posEstimator.mocap.eph = 1.0f;
+        posEstimator.mocap.epv = 1.0f;
         //estiamting the movement velocity
-        if(previousX == 0 && previousY == 0 && previousZ == 0)
+        if(lastUpdateTime == 0)
         {
             previousX = posEstimator.mocap.pos.x;
             previousY = posEstimator.mocap.pos.y;
             previousZ = posEstimator.mocap.pos.z;
-            // first_reading_flag = false;
+            lastUpdateTime = mocap_received_values_t.lastUpdateTime;
         }
-        // float dT = US2S(getGPSDeltaTimeFilter(currentTimeUs - lastMOCAPNewDataTime));
-        float dT = US2S(currentTimeUs - lastMOCAPNewDataTime);
+        else
+        {
+        float dT = US2S(mocap_received_values_t.lastUpdateTime - lastUpdateTime);
         posEstimator.mocap.vel.x = (posEstimator.mocap.pos.x-previousX)/dT;
         posEstimator.mocap.vel.y = (posEstimator.mocap.pos.y-previousY)/dT;
         posEstimator.mocap.vel.z = (posEstimator.mocap.pos.z-previousZ)/dT;
@@ -330,6 +333,10 @@ void onNewMOCAP(void)
         previousX = posEstimator.mocap.pos.x;
         previousY = posEstimator.mocap.pos.y;
         previousZ = posEstimator.mocap.pos.z;
+        }
+
+        mocap_received_values_t.valid = false; // always set it to false after reading
+        mocap_received_values_t.reading = false; // allows new messages to be received
     }
 }
 
@@ -535,6 +542,10 @@ static uint32_t calculateCurrentValidityFlags(timeUs_t currentTimeUs)//probably 
         newFlags |= EST_FLOW_VALID;
     }
 
+    if (sensors(SENSOR_MOCAP) && ((currentTimeUs - posEstimator.mocap.lastUpdateTime) <= MS2US(INAV_FLOW_TIMEOUT_MS))) {
+        newFlags |= EST_MOCAP_VALID;
+    }
+
     //
     // To be 100% safe I would change to abs(posEstimator.est.eph) and
     // abs(posEstimator.est.epv).
@@ -593,8 +604,30 @@ static bool estimationCalculateCorrection_Z(estimationContext_t * ctx)
         }
     }
 
-    // Now the priority is given to the surface (sonar / rangefinder) if reliable enough
-    if ((ctx->newFlags & EST_SURFACE_VALID) && (posEstimator.surface.reliability >= RANGEFINDER_RELIABILITY_LOW_THRESHOLD)){
+    // Now the priority is given to mocap if reliable enough
+    if (ctx->newFlags & EST_MOCAP_VALID){
+        bool isAirCushionEffectDetected = ARMING_FLAG(ARMED) && (posEstimator.mocap.pos.z < 20.0f);
+
+        const float mocapAltResidual = posEstimator.mocap.pos.z - posEstimator.est.pos.z;
+
+        ctx->estPosCorr.z += mocapAltResidual * positionEstimationConfig()->w_z_surface_p * ctx->dt;
+        ctx->estVelCorr.z += mocapAltResidual * sq(positionEstimationConfig()->w_z_surface_p) * ctx->dt;
+        
+        // Accelerometer bias
+        if (!isAirCushionEffectDetected) {
+            ctx->accBiasCorr.z -= mocapAltResidual * sq(positionEstimationConfig()->w_z_surface_p);
+        }
+
+        // Considering the mocap, when reliable, is 10x better than baro.
+        const float mocap_epv = positionEstimationConfig()->baro_epv/10.0;
+        ctx->newEPV = updateEPE(posEstimator.est.epv, ctx->dt, mocap_epv, positionEstimationConfig()->w_z_surface_p);
+
+        // Here GPS is not used because it would be way less precise if suface is valid anyway...
+
+        return true;
+
+    }
+    else if ((ctx->newFlags & EST_SURFACE_VALID) && (posEstimator.surface.reliability >= RANGEFINDER_RELIABILITY_LOW_THRESHOLD)){
 
         // We might be experiencing air cushion effect - use sonar altitude to detect it
         // TODO: test different values (currently it's 20.0f)
@@ -685,6 +718,56 @@ static bool estimationCalculateCorrection_Z(estimationContext_t * ctx)
     return false;
 }
 
+static bool estimationCalculateCorrection_XY_MOCAP(estimationContext_t * ctx)
+{
+    if (ctx->newFlags & EST_MOCAP_VALID) {
+        /* If MOCAP is valid and our estimate is NOT valid - reset it to MOCAP coordinates and velocity */
+        if (!(ctx->newFlags & EST_XY_VALID)) {
+            ctx->estPosCorr.x += posEstimator.mocap.pos.x - posEstimator.est.pos.x;
+            ctx->estPosCorr.y += posEstimator.mocap.pos.y - posEstimator.est.pos.y;
+            ctx->estVelCorr.x += posEstimator.mocap.vel.x - posEstimator.est.vel.x;
+            ctx->estVelCorr.y += posEstimator.mocap.vel.y - posEstimator.est.vel.y;
+            ctx->newEPH = 1.0;//posEstimator.mocap.epv; => I think this should come from the mocap message and sample rate we are receiving it...
+        }
+        else {
+            const float mocapPosXResidual = posEstimator.mocap.pos.x - posEstimator.est.pos.x;
+            const float mocapPosYResidual = posEstimator.mocap.pos.y - posEstimator.est.pos.y;
+            const float mocapVelXResidual = posEstimator.mocap.vel.x - posEstimator.est.vel.x;
+            const float mocapVelYResidual = posEstimator.mocap.vel.y - posEstimator.est.vel.y;
+            const float mocapPosResidualMag = sqrtf(sq(mocapPosXResidual) + sq(mocapPosYResidual));
+
+            //const float gpsWeightScaler = scaleRangef(bellCurve(gpsPosResidualMag, INAV_GPS_ACCEPTANCE_EPE), 0.0f, 1.0f, 0.1f, 1.0f);
+            const float mocapWeightScaler = posEstimator.mocap.eph;
+
+            const float w_xy_mocap_p = positionEstimationConfig()->w_xy_gps_p * mocapWeightScaler;
+            const float w_xy_mocap_v = positionEstimationConfig()->w_xy_gps_v * sq(mocapWeightScaler);
+
+            // Coordinates
+            ctx->estPosCorr.x += mocapPosXResidual * w_xy_mocap_p * ctx->dt;
+            ctx->estPosCorr.y += mocapPosYResidual * w_xy_mocap_p * ctx->dt;
+
+            // Velocity from coordinates
+            ctx->estVelCorr.x += mocapPosXResidual * sq(w_xy_mocap_p) * ctx->dt;
+            ctx->estVelCorr.y += mocapPosYResidual * sq(w_xy_mocap_p) * ctx->dt;
+
+            // Velocity from direct measurement
+            ctx->estVelCorr.x += mocapVelXResidual * w_xy_mocap_v * ctx->dt;
+            ctx->estVelCorr.y += mocapVelYResidual * w_xy_mocap_v * ctx->dt;
+
+            // Accelerometer bias
+            ctx->accBiasCorr.x -= mocapPosXResidual * sq(w_xy_mocap_p);
+            ctx->accBiasCorr.y -= mocapPosYResidual * sq(w_xy_mocap_p);
+
+            /* Adjust EPH */
+            ctx->newEPH = updateEPE(posEstimator.est.eph, ctx->dt, MAX(posEstimator.mocap.eph, mocapPosResidualMag), w_xy_mocap_p);
+        }
+
+        return true;
+    }
+
+    return false;
+}
+
 static bool estimationCalculateCorrection_XY_GPS(estimationContext_t * ctx)
 {
     if (ctx->newFlags & EST_GPS_XY_VALID) {
@@ -767,7 +850,7 @@ static void updateEstimatedTopic(timeUs_t currentTimeUs)
     estimationCalculateAGL(&ctx);
 
     /* Prediction stage: X,Y,Z */
-    // estimationPredict(&ctx);
+    estimationPredict(&ctx);
 
     /* Correction stage: Z */
     const bool estZCorrectOk =
@@ -775,9 +858,10 @@ static void updateEstimatedTopic(timeUs_t currentTimeUs)
 
     /* Correction stage: XY: GPS, FLOW */
     // FIXME: Handle transition from FLOW to GPS and back - seamlessly fly indoor/outdoor
-    // const bool estXYCorrectOk =
-    //     estimationCalculateCorrection_XY_GPS(&ctx) ||
-    //     estimationCalculateCorrection_XY_FLOW(&ctx);
+    const bool estXYCorrectOk =
+        estimationCalculateCorrection_XY_GPS(&ctx) ||
+        estimationCalculateCorrection_XY_FLOW(&ctx) ||
+        estimationCalculateCorrection_XY_MOCAP(&ctx);
 
     // If we can't apply correction or accuracy is off the charts - decay velocity to zero
     if (!estXYCorrectOk || ctx.newEPH > positionEstimationConfig()->max_eph_epv) {
@@ -791,37 +875,9 @@ static void updateEstimatedTopic(timeUs_t currentTimeUs)
     //
     // Apply corrections
     //
-    //if we have valid mocap readings, we give mocap higher weight in the position estimation
-    if (mocap_received_values_t.valid){
-        mocap_received_values_t.reading = true; // indicates we are reading the data
-        
-        // Apply corrections based on the optitrack values received
-        // See code above for inspiration...
-        // mocap_received_values_t.X;
-        // mocap_received_values_t.Y;
-        // mocap_received_values_t.Z;
 
-        posEstimator.est.pos.x = posEstimator.mocap.pos.x;
-        posEstimator.est.pos.y = posEstimator.mocap.pos.y;
-        posEstimator.est.pos.z = posEstimator.mocap.pos.z;
-        attitude.values.yaw = mocap_received_values_t.YAW;// posEstimator.mocap.yaw;
-        // posEstimator.est.pos.x = mocap_received_values_t.X;
-        // posEstimator.est.pos.y = mocap_received_values_t.Y;
-        // posEstimator.est.pos.z = mocap_received_values_t.Z;
-
-        posEstimator.est.vel.x = posEstimator.mocap.vel.x;
-        posEstimator.est.vel.y = posEstimator.mocap.vel.y;
-        posEstimator.est.vel.z = posEstimator.mocap.vel.z;
-
-        mocap_received_values_t.valid = false; // always set it to false after reading
-        mocap_received_values_t.reading = false; // allows new messages to be received
-    }
-    else
-    {
-        vectorAdd(&posEstimator.est.pos, &posEstimator.est.pos, &ctx.estPosCorr);
-        vectorAdd(&posEstimator.est.vel, &posEstimator.est.vel, &ctx.estVelCorr);
-    }
-
+    vectorAdd(&posEstimator.est.pos, &posEstimator.est.pos, &ctx.estPosCorr);
+    vectorAdd(&posEstimator.est.vel, &posEstimator.est.vel, &ctx.estVelCorr);
 
     
 
