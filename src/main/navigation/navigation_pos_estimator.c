@@ -321,7 +321,6 @@ void onNewMOCAP(void)
             previousX = posEstimator.mocap.pos.x;
             previousY = posEstimator.mocap.pos.y;
             previousZ = posEstimator.mocap.pos.z;
-            lastUpdateTime = mocap_received_values_t.lastUpdateTime;
         }
         else
         {
@@ -334,6 +333,9 @@ void onNewMOCAP(void)
         previousY = posEstimator.mocap.pos.y;
         previousZ = posEstimator.mocap.pos.z;
         }
+
+        lastUpdateTime = mocap_received_values_t.lastUpdateTime;
+        posEstimator.mocap.lastUpdateTime = lastUpdateTime;
 
         mocap_received_values_t.valid = false; // always set it to false after reading
         mocap_received_values_t.reading = false; // allows new messages to be received
