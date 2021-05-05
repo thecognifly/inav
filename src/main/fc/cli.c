@@ -149,7 +149,7 @@ static const char * const featureNames[] = {
     "", "RSSI_ADC", "LED_STRIP", "DASHBOARD", "",
     "BLACKBOX", "", "TRANSPONDER", "AIRMODE",
     "SUPEREXPO", "VTX", "", "", "PWM_SERVO_DRIVER", "PWM_OUTPUT_ENABLE",
-    "OSD", "FW_LAUNCH", NULL
+    "OSD", "FW_LAUNCH", "MOCAP", NULL
 };
 
 /* Sensor names (used in lookup tables for *_hardware settings and in status command output) */
@@ -158,10 +158,10 @@ static const char * const gyroNames[] = { "NONE", "AUTO", "MPU6050", "L3G4200D",
 
 // sync this with sensors_e
 static const char * const sensorTypeNames[] = {
-    "GYRO", "ACC", "BARO", "MAG", "RANGEFINDER", "PITOT", "OPFLOW", "GPS", "GPS+MAG", NULL
+    "GYRO", "ACC", "BARO", "MAG", "RANGEFINDER", "PITOT", "OPFLOW", "GPS", "GPS+MAG", "MOCAP", NULL
 };
 
-#define SENSOR_NAMES_MASK (SENSOR_GYRO | SENSOR_ACC | SENSOR_BARO | SENSOR_MAG | SENSOR_RANGEFINDER | SENSOR_PITOT | SENSOR_OPFLOW)
+#define SENSOR_NAMES_MASK (SENSOR_GYRO | SENSOR_ACC | SENSOR_BARO | SENSOR_MAG | SENSOR_RANGEFINDER | SENSOR_PITOT | SENSOR_OPFLOW | SENSOR_MOCAP)
 
 static const char * const hardwareSensorStatusNames[] = {
     "NONE", "OK", "UNAVAILABLE", "FAILING"
@@ -2898,13 +2898,14 @@ static void cliStatus(char *cmdline)
     cliPrintLinef("  PCLK2  = %d MHz", clocks.PCLK2_Frequency / 1000000);
 #endif
 
-    cliPrintLinef("Sensor status: GYRO=%s, ACC=%s, MAG=%s, BARO=%s, RANGEFINDER=%s, OPFLOW=%s, GPS=%s",
+    cliPrintLinef("Sensor status: GYRO=%s, ACC=%s, MAG=%s, BARO=%s, RANGEFINDER=%s, OPFLOW=%s, GPS=%s, MOCAP=%s",
         hardwareSensorStatusNames[getHwGyroStatus()],
         hardwareSensorStatusNames[getHwAccelerometerStatus()],
         hardwareSensorStatusNames[getHwCompassStatus()],
         hardwareSensorStatusNames[getHwBarometerStatus()],
         hardwareSensorStatusNames[getHwRangefinderStatus()],
         hardwareSensorStatusNames[getHwOpticalFlowStatus()],
+        hardwareSensorStatusNames[getHwGPSStatus()],
         hardwareSensorStatusNames[getHwGPSStatus()]
     );
 

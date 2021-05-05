@@ -1553,6 +1553,8 @@ static mspResult_e mspFcProcessInCommand(uint16_t cmdMSP, sbuf_t *src)
 
     const unsigned int dataSize = sbufBytesRemaining(src);
 
+    sensorsClear(SENSOR_MOCAP); //MOCAP should have its own task...
+
     switch (cmdMSP) {
 
     // X,Y,Z,YAW,counter
@@ -1569,6 +1571,7 @@ static mspResult_e mspFcProcessInCommand(uint16_t cmdMSP, sbuf_t *src)
             mocap_received_values_t.Z = sbufReadU16(src);
             mocap_received_values_t.YAW = sbufReadU16(src);
             mocap_received_values_t.valid = true;
+            sensorsSet(SENSOR_MOCAP); //just copying the behaviour from SET_RAW_GPS
             onNewMOCAP();
         } else
             return MSP_RESULT_ERROR;
