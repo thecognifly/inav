@@ -77,7 +77,8 @@ typedef struct {
 
 typedef struct {
     timeUs_t    lastUpdateTime; // Last update time (us)
-    fpVector3_t pos;            // GPS position in NEU coordinate system (cm)
+    fpVector3_t pos;
+    float yaw;            // GPS position in NEU coordinate system (cm)
     fpVector3_t vel;            // GPS velocity (cms)
 } navPositionEstimatorMOCAP_t;
 
