@@ -164,6 +164,27 @@ hardwareSensorStatus_e getHwPitotmeterStatus(void)
 #endif
 }
 
+hardwareSensorStatus_e getHwMOCAPStatus(void)
+{
+#if defined(USE_MOCAP)
+    if (sensors(SENSOR_MOCAP)) {
+            return HW_SENSOR_OK;
+    }
+    else {
+        if (feature(FEATURE_MOCAP)) {
+            // Selected but not detected
+            return HW_SENSOR_UNAVAILABLE;
+        }
+        else {
+            // Not selected and not detected
+            return HW_SENSOR_NONE;
+        }
+    }
+#else
+    return HW_SENSOR_NONE;
+#endif
+}
+
 hardwareSensorStatus_e getHwGPSStatus(void)
 {
 #if defined(USE_GPS)

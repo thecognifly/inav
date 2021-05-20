@@ -2906,7 +2906,7 @@ static void cliStatus(char *cmdline)
         hardwareSensorStatusNames[getHwRangefinderStatus()],
         hardwareSensorStatusNames[getHwOpticalFlowStatus()],
         hardwareSensorStatusNames[getHwGPSStatus()],
-        hardwareSensorStatusNames[getHwGPSStatus()]
+        hardwareSensorStatusNames[getHwMOCAPStatus()]
     );
 
 #ifdef USE_SDCARD

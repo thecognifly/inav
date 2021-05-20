@@ -84,6 +84,10 @@ PG_RESET_TEMPLATE(positionEstimationConfig_t, positionEstimationConfig,
         .w_xy_flow_p = 1.0f,
         .w_xy_flow_v = 2.0f,
 
+        .w_xy_mocap_p = 1.0f,
+        .w_xy_mocap_v = 2.0f,
+        .w_z_mocap_p = 1.0f,
+
         .w_z_res_v = 0.5f,
         .w_xy_res_v = 0.5f,
 
@@ -321,7 +325,6 @@ void onNewMOCAP(void)
             previousX = posEstimator.mocap.pos.x;
             previousY = posEstimator.mocap.pos.y;
             previousZ = posEstimator.mocap.pos.z;
-            lastUpdateTime = mocap_received_values_t.lastUpdateTime;
         }
         else
         {
@@ -334,6 +337,9 @@ void onNewMOCAP(void)
         previousY = posEstimator.mocap.pos.y;
         previousZ = posEstimator.mocap.pos.z;
         }
+
+        lastUpdateTime = mocap_received_values_t.lastUpdateTime;
+        posEstimator.mocap.lastUpdateTime = lastUpdateTime;
 
         mocap_received_values_t.valid = false; // always set it to false after reading
         mocap_received_values_t.reading = false; // allows new messages to be received
@@ -610,17 +616,17 @@ static bool estimationCalculateCorrection_Z(estimationContext_t * ctx)
 
         const float mocapAltResidual = posEstimator.mocap.pos.z - posEstimator.est.pos.z;
 
-        ctx->estPosCorr.z += mocapAltResidual * positionEstimationConfig()->w_z_surface_p * ctx->dt;
-        ctx->estVelCorr.z += mocapAltResidual * sq(positionEstimationConfig()->w_z_surface_p) * ctx->dt;
+        ctx->estPosCorr.z += mocapAltResidual * positionEstimationConfig()->w_z_mocap_p * ctx->dt;
+        ctx->estVelCorr.z += mocapAltResidual * sq(positionEstimationConfig()->w_z_mocap_p) * ctx->dt;
         
         // Accelerometer bias
         if (!isAirCushionEffectDetected) {
-            ctx->accBiasCorr.z -= mocapAltResidual * sq(positionEstimationConfig()->w_z_surface_p);
+            ctx->accBiasCorr.z -= mocapAltResidual * sq(positionEstimationConfig()->w_z_mocap_p);
         }
 
-        // Considering the mocap, when reliable, is 10x better than baro.
-        const float mocap_epv = positionEstimationConfig()->baro_epv/10.0;
-        ctx->newEPV = updateEPE(posEstimator.est.epv, ctx->dt, mocap_epv, positionEstimationConfig()->w_z_surface_p);
+        // Considering the mocap, when reliable, is 100x better than baro.
+        const float mocap_epv = positionEstimationConfig()->baro_epv/100.0;
+        ctx->newEPV = updateEPE(posEstimator.est.epv, ctx->dt, mocap_epv, positionEstimationConfig()->w_z_mocap_p);
 
         // Here GPS is not used because it would be way less precise if suface is valid anyway...
 
@@ -734,13 +740,9 @@ static bool estimationCalculateCorrection_XY_MOCAP(estimationContext_t * ctx)
             const float mocapPosYResidual = posEstimator.mocap.pos.y - posEstimator.est.pos.y;
             const float mocapVelXResidual = posEstimator.mocap.vel.x - posEstimator.est.vel.x;
             const float mocapVelYResidual = posEstimator.mocap.vel.y - posEstimator.est.vel.y;
-            const float mocapPosResidualMag = sqrtf(sq(mocapPosXResidual) + sq(mocapPosYResidual));
 
-            //const float gpsWeightScaler = scaleRangef(bellCurve(gpsPosResidualMag, INAV_GPS_ACCEPTANCE_EPE), 0.0f, 1.0f, 0.1f, 1.0f);
-            const float mocapWeightScaler = 1.0;//posEstimator.mocap.eph;
-
-            const float w_xy_mocap_p = positionEstimationConfig()->w_xy_gps_p * mocapWeightScaler;
-            const float w_xy_mocap_v = positionEstimationConfig()->w_xy_gps_v * sq(mocapWeightScaler);
+            const float w_xy_mocap_p = positionEstimationConfig()->w_xy_mocap_p;
+            const float w_xy_mocap_v = positionEstimationConfig()->w_xy_mocap_v;
 
             // Coordinates
             ctx->estPosCorr.x += mocapPosXResidual * w_xy_mocap_p * ctx->dt;
@@ -759,7 +761,8 @@ static bool estimationCalculateCorrection_XY_MOCAP(estimationContext_t * ctx)
             ctx->accBiasCorr.y -= mocapPosYResidual * sq(w_xy_mocap_p);
 
             /* Adjust EPH */
-            ctx->newEPH = updateEPE(posEstimator.est.eph, ctx->dt, MAX(posEstimator.mocap.eph, mocapPosResidualMag), w_xy_mocap_p);
+            //ctx->newEPH = updateEPE(posEstimator.est.eph, ctx->dt, MAX(posEstimator.mocap.eph, sqrtf(sq(mocapPosXResidual) + sq(mocapPosYResidual))), w_xy_mocap_p); // like GPS
+            ctx->newEPH = updateEPE(posEstimator.est.eph, ctx->dt, sqrtf(sq(mocapPosXResidual) + sq(mocapPosYResidual)), w_xy_mocap_p); //like FLOW
         }
 
         return true;
