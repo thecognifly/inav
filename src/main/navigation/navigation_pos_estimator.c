@@ -737,7 +737,7 @@ static bool estimationCalculateCorrection_XY_MOCAP(estimationContext_t * ctx)
             const float mocapPosResidualMag = sqrtf(sq(mocapPosXResidual) + sq(mocapPosYResidual));
 
             //const float gpsWeightScaler = scaleRangef(bellCurve(gpsPosResidualMag, INAV_GPS_ACCEPTANCE_EPE), 0.0f, 1.0f, 0.1f, 1.0f);
-            const float mocapWeightScaler = posEstimator.mocap.eph;
+            const float mocapWeightScaler = 1.0;//posEstimator.mocap.eph;
 
             const float w_xy_mocap_p = positionEstimationConfig()->w_xy_gps_p * mocapWeightScaler;
             const float w_xy_mocap_v = positionEstimationConfig()->w_xy_gps_v * sq(mocapWeightScaler);
@@ -858,10 +858,12 @@ static void updateEstimatedTopic(timeUs_t currentTimeUs)
 
     /* Correction stage: XY: GPS, FLOW */
     // FIXME: Handle transition from FLOW to GPS and back - seamlessly fly indoor/outdoor
-    const bool estXYCorrectOk =
-        estimationCalculateCorrection_XY_GPS(&ctx) ||
-        estimationCalculateCorrection_XY_FLOW(&ctx) ||
-        estimationCalculateCorrection_XY_MOCAP(&ctx);
+    // const bool estXYCorrectOk =
+    //     estimationCalculateCorrection_XY_GPS(&ctx) ||
+    //     estimationCalculateCorrection_XY_FLOW(&ctx) ||
+    //     estimationCalculateCorrection_XY_MOCAP(&ctx); 
+
+    const bool estXYCorrectOk = estimationCalculateCorrection_XY_MOCAP(&ctx);
 
     // If we can't apply correction or accuracy is off the charts - decay velocity to zero
     // if (!estXYCorrectOk || ctx.newEPH > positionEstimationConfig()->max_eph_epv) {
