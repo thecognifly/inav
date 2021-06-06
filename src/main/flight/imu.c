@@ -458,9 +458,9 @@ STATIC_UNIT_TESTED void imuUpdateEulerAngles(void)
     attitude.values.pitch = RADIANS_TO_DECIDEGREES((0.5f * M_PIf) - acos_approx(-rMat[2][0]));
     attitude.values.yaw = RADIANS_TO_DECIDEGREES(-atan2_approx(rMat[1][0], rMat[0][0]));
 
-    if (mocap_received_values_t.valid){
-        attitude.values.yaw = mocap_received_values_t.YAW * 10.0;
-    }
+    // if (mocap_received_values_t.valid){
+    //     attitude.values.yaw = mocap_received_values_t.YAW * 10.0;
+    // }
 
     if (attitude.values.yaw < 0)
         attitude.values.yaw += 3600;
@@ -564,6 +564,19 @@ static void imuCalculateEstimatedAttitude(float dT)
         // Multicopters don't use GPS heading
         if (canUseMAG) {
             useMag = true;
+        } 
+        else if (sensors(SENSOR_MOCAP)){
+            if (gpsHeadingInitialized) {
+                courseOverGround = DECIDEGREES_TO_RADIANS(mocap_received_values_t.YAW);
+                useCOG = true;
+            }
+            else {
+                imuComputeQuaternionFromRPY(attitude.values.roll, attitude.values.pitch, mocap_received_values_t.YAW);
+                gpsHeadingInitialized = true;
+
+                // Force reset of heading hold target
+                resetHeadingHoldTarget(DECIDEGREES_TO_DEGREES(attitude.values.yaw));
+            }
         }
     }
 #else
@@ -575,7 +588,12 @@ static void imuCalculateEstimatedAttitude(float dT)
 
     fpVector3_t measuredMagBF = { .v = { mag.magADC[X], mag.magADC[Y], mag.magADC[Z] } };
 
-    const float magWeight = imuGetPGainScaleFactor() * 1.0f;
+    float magWeight = imuGetPGainScaleFactor() * 1.0f;
+
+    if (sensors(SENSOR_MOCAP)){
+        magWeight *= 100.0f; //this should come from the config...
+    }
+
     const float accWeight = imuGetPGainScaleFactor() * imuCalculateAccelerometerWeight(dT);
     const bool useAcc = (accWeight > 0.001f);
 
@@ -675,7 +693,7 @@ bool isImuReady(void)
 
 bool isImuHeadingValid(void)
 {
-    return (sensors(SENSOR_MAG) && STATE(COMPASS_CALIBRATED)) || (STATE(FIXED_WING) && gpsHeadingInitialized);
+    return (sensors(SENSOR_MAG) && STATE(COMPASS_CALIBRATED)) || (STATE(FIXED_WING) && gpsHeadingInitialized) || sensors(SENSOR_MOCAP);
 }
 
 float calculateCosTiltAngle(void)
