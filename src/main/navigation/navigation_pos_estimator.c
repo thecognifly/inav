@@ -516,6 +516,9 @@ static bool navIsHeadingUsable(void)
         // If we have GPS - we need true IMU north (valid heading)
         return isImuHeadingValid();
     }
+    else if (sensors(SENSOR_MOCAP)){
+        return isImuHeadingValid();
+    }
     else {
         // If we don't have GPS - we may use whatever we have, other sensors are operating in body frame
         return isImuHeadingValid() || positionEstimationConfig()->allow_dead_reckoning;
@@ -550,8 +553,12 @@ static uint32_t calculateCurrentValidityFlags(timeUs_t currentTimeUs)//probably 
         newFlags |= EST_FLOW_VALID;
     }
 
-    if (sensors(SENSOR_MOCAP) && ((currentTimeUs - posEstimator.mocap.lastUpdateTime) <= MS2US(INAV_FLOW_TIMEOUT_MS))) {
+    if (sensors(SENSOR_MOCAP) && ((currentTimeUs - posEstimator.mocap.lastUpdateTime) <= MS2US(INAV_MOCAP_TIMEOUT_MS))) {
         newFlags |= EST_MOCAP_VALID;
+    }
+    else
+    {
+        sensorsClear(SENSOR_MOCAP); //the MSP message will set it again...
     }
 
     //
@@ -751,21 +758,23 @@ static bool estimationCalculateCorrection_XY_MOCAP(estimationContext_t * ctx)
             ctx->estPosCorr.x += mocapPosXResidual * w_xy_mocap_p * ctx->dt;
             ctx->estPosCorr.y += mocapPosYResidual * w_xy_mocap_p * ctx->dt;
 
-            // Velocity from coordinates
-            ctx->estVelCorr.x += mocapPosXResidual * sq(w_xy_mocap_p) * ctx->dt;
-            ctx->estVelCorr.y += mocapPosYResidual * sq(w_xy_mocap_p) * ctx->dt;
+            // // Velocity from coordinates
+            // ctx->estVelCorr.x += mocapPosXResidual * sq(w_xy_mocap_p) * ctx->dt;
+            // ctx->estVelCorr.y += mocapPosYResidual * sq(w_xy_mocap_p) * ctx->dt;
 
             // Velocity from direct measurement
             ctx->estVelCorr.x += mocapVelXResidual * w_xy_mocap_v * ctx->dt;
             ctx->estVelCorr.y += mocapVelYResidual * w_xy_mocap_v * ctx->dt;
 
             // Accelerometer bias
-            ctx->accBiasCorr.x -= mocapPosXResidual * sq(w_xy_mocap_p);
-            ctx->accBiasCorr.y -= mocapPosYResidual * sq(w_xy_mocap_p);
+            // ctx->accBiasCorr.x -= mocapPosXResidual * sq(w_xy_mocap_p);
+            // ctx->accBiasCorr.y -= mocapPosYResidual * sq(w_xy_mocap_p);
+            ctx->accBiasCorr.x -= mocapVelXResidual * w_xy_mocap_v;
+            ctx->accBiasCorr.y -= mocapVelYResidual * w_xy_mocap_v;
 
             /* Adjust EPH */
             //ctx->newEPH = updateEPE(posEstimator.est.eph, ctx->dt, MAX(posEstimator.mocap.eph, sqrtf(sq(mocapPosXResidual) + sq(mocapPosYResidual))), w_xy_mocap_p); // like GPS
-            ctx->newEPH = updateEPE(posEstimator.est.eph, ctx->dt, sqrtf(sq(mocapPosXResidual) + sq(mocapPosYResidual)), w_xy_mocap_p); //like FLOW
+            ctx->newEPH = updateEPE(posEstimator.est.eph, ctx->dt, sqrtf(sq(mocapPosXResidual) + sq(mocapPosYResidual))/2.0f, w_xy_mocap_p); //like FLOW
         }
 
         return true;
