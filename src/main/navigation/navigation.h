@@ -133,7 +133,9 @@ typedef struct positionEstimationConfig_s {
 
     float w_xy_mocap_p;
     float w_xy_mocap_v;
+
     float w_z_mocap_p;
+    float w_z_mocap_v;
 
     float w_acc_bias;   // Weight (cutoff frequency) for accelerometer bias estimation. 0 to disable.
     float w_xyz_acc_p;

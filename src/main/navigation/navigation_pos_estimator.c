@@ -84,9 +84,11 @@ PG_RESET_TEMPLATE(positionEstimationConfig_t, positionEstimationConfig,
         .w_xy_flow_p = 1.0f,
         .w_xy_flow_v = 2.0f,
 
-        .w_xy_mocap_p = 1.0f,
-        .w_xy_mocap_v = 2.0f,
-        .w_z_mocap_p = 1.0f,
+        .w_xy_mocap_p = 2.0f, //2x the GPS value
+        .w_xy_mocap_v = 4.0f, //2x the GPS value
+
+        .w_z_mocap_p = 7.0f,  //2x the ToF value
+        .w_z_mocap_v = 12.2f, //2x the ToF value
 
         .w_z_res_v = 0.5f,
         .w_xy_res_v = 0.5f,
@@ -319,7 +321,7 @@ void onNewMOCAP(void)
         posEstimator.mocap.yaw = mocap_received_values_t.YAW;
         posEstimator.mocap.eph = 1.0f;
         posEstimator.mocap.epv = 1.0f;
-        //estiamting the movement velocity
+        //estimating the movement velocity
         if(lastUpdateTime == 0)
         {
             previousX = posEstimator.mocap.pos.x;
@@ -578,7 +580,7 @@ static void estimationPredict(estimationContext_t * ctx)
     /* Prediction step: Z-axis */
     if ((ctx->newFlags & EST_Z_VALID)) {
         posEstimator.est.pos.z += posEstimator.est.vel.z * ctx->dt;
-        posEstimator.est.pos.z += posEstimator.imu.accelNEU.z * sq(ctx->dt) / 2.0f * accWeight;
+        posEstimator.est.pos.z += (posEstimator.imu.accelNEU.z * sq(ctx->dt) / 2.0f) * accWeight;
         posEstimator.est.vel.z += posEstimator.imu.accelNEU.z * ctx->dt * sq(accWeight);
     }
 
@@ -615,20 +617,21 @@ static bool estimationCalculateCorrection_Z(estimationContext_t * ctx)
         bool isAirCushionEffectDetected = ARMING_FLAG(ARMED) && (posEstimator.mocap.pos.z < 20.0f);
 
         const float mocapAltResidual = posEstimator.mocap.pos.z - posEstimator.est.pos.z;
+        const float mocapAltVResidual = posEstimator.mocap.vel.z - posEstimator.est.vel.z;
 
         ctx->estPosCorr.z += mocapAltResidual * positionEstimationConfig()->w_z_mocap_p * ctx->dt;
-        ctx->estVelCorr.z += mocapAltResidual * sq(positionEstimationConfig()->w_z_mocap_p) * ctx->dt;
+        ctx->estVelCorr.z += mocapAltVResidual * positionEstimationConfig()->w_z_mocap_v * ctx->dt;
         
         // Accelerometer bias
         if (!isAirCushionEffectDetected) {
-            ctx->accBiasCorr.z -= mocapAltResidual * sq(positionEstimationConfig()->w_z_mocap_p);
+            ctx->accBiasCorr.z -= mocapAltVResidual * positionEstimationConfig()->w_z_mocap_v * ctx->dt;
         }
 
         // Considering the mocap, when reliable, is 100x better than baro.
-        const float mocap_epv = positionEstimationConfig()->baro_epv/100.0;
-        ctx->newEPV = updateEPE(posEstimator.est.epv, ctx->dt, mocap_epv, positionEstimationConfig()->w_z_mocap_p);
+        //const float mocap_epv = positionEstimationConfig()->baro_epv/100.0;
+        ctx->newEPV = updateEPE(posEstimator.est.epv, ctx->dt, sqrtf(sq(mocapAltResidual) + sq(mocapAltVResidual))/2.0f, positionEstimationConfig()->w_z_mocap_p);
 
-        // Here GPS is not used because it would be way less precise if suface is valid anyway...
+        // Here GPS is not used because it would be way less precise if surface is valid anyway...
 
         return true;
 
@@ -1020,6 +1023,16 @@ void FAST_CODE NOINLINE updatePositionEstimator(void)
     // DEBUG_SET(DEBUG_MOCAP, 2, (mocap_received_values_t.Z * 1.0F));
     // DEBUG_SET(DEBUG_MOCAP, 3, (mocap_received_values_t.YAW * 1.0F));
 
+    // DEBUG_SET(DEBUG_MOCAP, 0, (posEstimator.mocap.pos.x * 1.0F));
+    // DEBUG_SET(DEBUG_MOCAP, 1, (posEstimator.mocap.pos.y * 1.0F));
+    // DEBUG_SET(DEBUG_MOCAP, 2, (posEstimator.mocap.pos.z * 1.0F));
+    // DEBUG_SET(DEBUG_MOCAP, 3, (posEstimator.mocap.yaw * 1.0F));
+
+    // DEBUG_SET(DEBUG_MOCAP, 0, (posEstimator.mocap.pos.z * 1.0F));
+    // DEBUG_SET(DEBUG_MOCAP, 1, (posEstimator.mocap.vel.z * 1.0F));
+    // DEBUG_SET(DEBUG_MOCAP, 2, (posEstimator.est.pos.z * 1.0F));
+    // DEBUG_SET(DEBUG_MOCAP, 3, (posEstimator.est.vel.z * 1.0F));
+    
     DEBUG_SET(DEBUG_MOCAP, 0, (posEstimator.est.pos.x * 1.0F));
     DEBUG_SET(DEBUG_MOCAP, 1, (posEstimator.est.pos.y * 1.0F));
     DEBUG_SET(DEBUG_MOCAP, 2, (posEstimator.est.pos.z * 1.0F));
