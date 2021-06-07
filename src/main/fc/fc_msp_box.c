@@ -190,7 +190,8 @@ void initActiveBoxIds(void)
     // To enable Surface or Altitude Hold it's necessary to have something
     // to measure the altitude like barometer, GPS or sonar / rangefinder.
     if (sensors(SENSOR_BARO) || (STATE(FIXED_WING) && feature(FEATURE_GPS)) 
-                             || sensors(SENSOR_RANGEFINDER)) {
+                             || sensors(SENSOR_RANGEFINDER)
+                             || feature(FEATURE_MOCAP)) {
         activeBoxIds[activeBoxIdCount++] = BOXNAVALTHOLD;
         activeBoxIds[activeBoxIdCount++] = BOXSURFACE;
     }
@@ -200,7 +201,7 @@ void initActiveBoxIds(void)
     const bool navReadyQuads = !STATE(FIXED_WING) && (getHwCompassStatus() != HW_SENSOR_NONE) && sensors(SENSOR_ACC) && feature(FEATURE_GPS);
     const bool navReadyPlanes = STATE(FIXED_WING) && sensors(SENSOR_ACC) && feature(FEATURE_GPS);
     const bool navFlowDeadReckoning = sensors(SENSOR_OPFLOW) && sensors(SENSOR_ACC) && positionEstimationConfig()->allow_dead_reckoning;
-    if (navFlowDeadReckoning || navReadyQuads || navReadyPlanes) {
+    if (navFlowDeadReckoning || navReadyQuads || navReadyPlanes || feature(FEATURE_MOCAP)) {
         activeBoxIds[activeBoxIdCount++] = BOXNAVPOSHOLD;
         if (STATE(FIXED_WING)) {
             activeBoxIds[activeBoxIdCount++] = BOXLOITERDIRCHN;
