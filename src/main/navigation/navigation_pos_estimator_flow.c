@@ -98,8 +98,15 @@ bool estimationCalculateCorrection_XY_FLOW(estimationContext_t * ctx)
     ctx->estVelCorr.y = flowVelYInnov * positionEstimationConfig()->w_xy_flow_v * ctx->dt;
 
     // Calculate position correction if possible/allowed
-    if ((ctx->newFlags & EST_GPS_XY_VALID)) {
+    if ((ctx->newFlags & EST_MOCAP_VALID)) {
+        // If MOCAP is valid - reset flow estimated coordinates to MOCAP
+        // In this scenario, MOCAP is keeping EPH low
+        posEstimator.est.flowCoordinates[X] = posEstimator.mocap.pos.x;
+        posEstimator.est.flowCoordinates[Y] = posEstimator.mocap.pos.y;
+    }
+    else if ((ctx->newFlags & EST_GPS_XY_VALID)) {
         // If GPS is valid - reset flow estimated coordinates to GPS
+        // In this scenario, GPS is keeping EPH low
         posEstimator.est.flowCoordinates[X] = posEstimator.gps.pos.x;
         posEstimator.est.flowCoordinates[Y] = posEstimator.gps.pos.y;
     }
