@@ -330,14 +330,14 @@ void onNewMOCAP(void)
         }
         else
         {
-        float dT = US2S(mocap_received_values_t.lastUpdateTime - lastUpdateTime);
-        posEstimator.mocap.vel.x = (posEstimator.mocap.pos.x-previousX)/dT;
-        posEstimator.mocap.vel.y = (posEstimator.mocap.pos.y-previousY)/dT;
-        posEstimator.mocap.vel.z = (posEstimator.mocap.pos.z-previousZ)/dT;
+            float dT = US2S(mocap_received_values_t.lastUpdateTime - lastUpdateTime);
+            posEstimator.mocap.vel.x = (posEstimator.mocap.pos.x-previousX)/dT;
+            posEstimator.mocap.vel.y = (posEstimator.mocap.pos.y-previousY)/dT;
+            posEstimator.mocap.vel.z = (posEstimator.mocap.pos.z-previousZ)/dT;
 
-        previousX = posEstimator.mocap.pos.x;
-        previousY = posEstimator.mocap.pos.y;
-        previousZ = posEstimator.mocap.pos.z;
+            previousX = posEstimator.mocap.pos.x;
+            previousY = posEstimator.mocap.pos.y;
+            previousZ = posEstimator.mocap.pos.z;
         }
 
         lastUpdateTime = mocap_received_values_t.lastUpdateTime;
@@ -525,7 +525,7 @@ static bool navIsHeadingUsable(void)
     }
 }
 
-static uint32_t calculateCurrentValidityFlags(timeUs_t currentTimeUs)//probably we can use this for assessing the validity of mocap readings?
+static uint8_t calculateCurrentValidityFlags(timeUs_t currentTimeUs)//probably we can use this for assessing the validity of mocap readings?
 {
     /* Figure out if we have valid position data from our data sources */
     uint32_t newFlags = 0;
@@ -556,26 +556,26 @@ static uint32_t calculateCurrentValidityFlags(timeUs_t currentTimeUs)//probably 
     if (sensors(SENSOR_MOCAP) && ((currentTimeUs - posEstimator.mocap.lastUpdateTime) <= MS2US(INAV_MOCAP_TIMEOUT_MS))) {
         newFlags |= EST_MOCAP_VALID;
     }
-    else
+    else if (sensors(SENSOR_MOCAP))
     {
         sensorsClear(SENSOR_MOCAP); //the MSP message will set it again...
     }
 
     //
-    // To be 100% safe I would change to abs(posEstimator.est.eph) and
-    // abs(posEstimator.est.epv).
-    // This needs stdlib and I'm not sure the effects using it here.
-    //
     // The default value for max_eph_epv is 1000.0
-    if (posEstimator.est.eph < positionEstimationConfig()->max_eph_epv) {
+    if ((posEstimator.est.eph < positionEstimationConfig()->max_eph_epv) && (posEstimator.est.eph > 0)) {
         newFlags |= EST_XY_VALID;
         // eph => h is for horizontal
     }
 
-    if (posEstimator.est.epv < positionEstimationConfig()->max_eph_epv) {
+    if ((posEstimator.est.epv < positionEstimationConfig()->max_eph_epv) && (posEstimator.est.epv > 0)) {
         newFlags |= EST_Z_VALID;
         // epv => v is for vertical
     }
+
+    DEBUG_SET(DEBUG_MOCAP, 0, posEstimator.est.epv);
+    DEBUG_SET(DEBUG_MOCAP, 1, posEstimator.est.eph);
+    DEBUG_SET(DEBUG_MOCAP, 3, newFlags);
 
     return newFlags;
 }
@@ -636,7 +636,7 @@ static bool estimationCalculateCorrection_Z(estimationContext_t * ctx)
 
         // Considering the mocap, when reliable, is 100x better than baro.
         //const float mocap_epv = positionEstimationConfig()->baro_epv/100.0;
-        ctx->newEPV = updateEPE(posEstimator.est.epv, ctx->dt, sqrtf(sq(mocapAltResidual) + sq(mocapAltVResidual))/2.0f, positionEstimationConfig()->w_z_mocap_p);
+        ctx->newEPV = updateEPE(posEstimator.est.epv, ctx->dt, MAX(posEstimator.mocap.epv,sqrtf(sq(mocapAltResidual) + sq(mocapAltVResidual))/2.0f), positionEstimationConfig()->w_z_mocap_p);
 
         // Here GPS is not used because it would be way less precise if surface is valid anyway...
 
@@ -774,7 +774,7 @@ static bool estimationCalculateCorrection_XY_MOCAP(estimationContext_t * ctx)
 
             /* Adjust EPH */
             //ctx->newEPH = updateEPE(posEstimator.est.eph, ctx->dt, MAX(posEstimator.mocap.eph, sqrtf(sq(mocapPosXResidual) + sq(mocapPosYResidual))), w_xy_mocap_p); // like GPS
-            ctx->newEPH = updateEPE(posEstimator.est.eph, ctx->dt, sqrtf(sq(mocapPosXResidual) + sq(mocapPosYResidual))/2.0f, w_xy_mocap_p); //like FLOW
+            ctx->newEPH = updateEPE(posEstimator.est.eph, ctx->dt, MAX(posEstimator.mocap.eph, sqrtf(sq(mocapPosXResidual) + sq(mocapPosYResidual))/2.0f), w_xy_mocap_p);
         }
 
         return true;
@@ -853,9 +853,10 @@ static void updateEstimatedTopic(timeUs_t currentTimeUs)
         return;
     }
 
-    /* Calculate new EPH and EPV for the case we didn't update postion */
+    /* Calculate new EPH and EPV for the case we didn't update position */
     ctx.newEPH = posEstimator.est.eph * ((posEstimator.est.eph <= positionEstimationConfig()->max_eph_epv) ? 1.0f + ctx.dt : 1.0f);
     ctx.newEPV = posEstimator.est.epv * ((posEstimator.est.epv <= positionEstimationConfig()->max_eph_epv) ? 1.0f + ctx.dt : 1.0f);
+
     ctx.newFlags = calculateCurrentValidityFlags(currentTimeUs);
     vectorZero(&ctx.estPosCorr);
     vectorZero(&ctx.estVelCorr);
@@ -873,10 +874,11 @@ static void updateEstimatedTopic(timeUs_t currentTimeUs)
 
     /* Correction stage: XY: GPS, FLOW */
     // FIXME: Handle transition from FLOW to GPS and back - seamlessly fly indoor/outdoor
-    // const bool estXYCorrectOk =
-    //     estimationCalculateCorrection_XY_GPS(&ctx) ||
-    //     estimationCalculateCorrection_XY_FLOW(&ctx) ||
-    //     estimationCalculateCorrection_XY_MOCAP(&ctx); 
+
+    const bool estXYCorrectOk =
+        estimationCalculateCorrection_XY_MOCAP(&ctx) ||
+        estimationCalculateCorrection_XY_GPS(&ctx) ||
+        estimationCalculateCorrection_XY_FLOW(&ctx);
 
     const bool estXYCorrectOk = estimationCalculateCorrection_XY_MOCAP(&ctx);
 
@@ -937,6 +939,7 @@ static void publishEstimatedTopic(timeUs_t currentTimeUs)
         /* Publish position update */
         if (posEstimator.est.eph < positionEstimationConfig()->max_eph_epv) {
             // FIXME!!!!!
+            // Using only FLOW, it should not set estPosValid = true
             updateActualHorizontalPositionAndVelocity(true, true, posEstimator.est.pos.x, posEstimator.est.pos.y, posEstimator.est.vel.x, posEstimator.est.vel.y);
         }
         else {
@@ -1044,10 +1047,12 @@ void FAST_CODE NOINLINE updatePositionEstimator(void)
     // DEBUG_SET(DEBUG_MOCAP, 2, (posEstimator.est.pos.z * 1.0F));
     // DEBUG_SET(DEBUG_MOCAP, 3, (posEstimator.est.vel.z * 1.0F));
     
-    DEBUG_SET(DEBUG_MOCAP, 0, (posEstimator.est.pos.x * 1.0F));
-    DEBUG_SET(DEBUG_MOCAP, 1, (posEstimator.est.pos.y * 1.0F));
-    DEBUG_SET(DEBUG_MOCAP, 2, (posEstimator.est.pos.z * 1.0F));
-    DEBUG_SET(DEBUG_MOCAP, 3, (attitude.values.yaw * 1.0F));
+    // DEBUG_SET(DEBUG_MOCAP, 0, (posEstimator.est.pos.x * 1.0F));
+    // DEBUG_SET(DEBUG_MOCAP, 1, (posEstimator.est.pos.y * 1.0F));
+    // DEBUG_SET(DEBUG_MOCAP, 2, (posEstimator.est.pos.z * 1.0F));
+    // DEBUG_SET(DEBUG_MOCAP, 3, (attitude.values.yaw * 1.0F));
+
+    DEBUG_SET(DEBUG_MOCAP, 2, (attitude.values.yaw * 1.0F));
 
 }
 

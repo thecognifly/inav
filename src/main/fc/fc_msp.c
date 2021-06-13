@@ -1565,6 +1565,7 @@ static mspResult_e mspFcProcessInCommand(uint16_t cmdMSP, sbuf_t *src)
             if (tmp_u16 > mocap_received_values_t.counter) {
                 mocap_received_values_t.counter = tmp_u16;
             }else{
+                mocap_received_values_t.valid = false;
                 return MSP_RESULT_ERROR;
             }
             mocap_received_values_t.X = sbufReadU16(src);
@@ -1573,7 +1574,9 @@ static mspResult_e mspFcProcessInCommand(uint16_t cmdMSP, sbuf_t *src)
             mocap_received_values_t.YAW = sbufReadU16(src);
             mocap_received_values_t.valid = true;
             mocap_received_values_t.lastUpdateTime = micros();
-            sensorsSet(SENSOR_MOCAP); //just copying the behaviour from SET_RAW_GPS
+            if (!sensors(SENSOR_MOCAP)){
+                sensorsSet(SENSOR_MOCAP); //just copying the behaviour from SET_RAW_GPS
+            }
             onNewMOCAP();
         } else
             return MSP_RESULT_ERROR;
