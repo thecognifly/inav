@@ -1,0 +1,10 @@
+the function   updateActualHorizontalPositionAndVelocity() is the one responsible for updating estimates, it is defined in navigation_private(), and implemented in navigation.c
+
+
+the function navOnEnteringState_NAV_STATE_POSHOLD_3D_INITIALIZE() is the one responsible for initializing all things related to the position hold controller
+
+the function navOnEnteringState_NAV_STATE_POSHOLD_3D_IN_PROGRESS () is the one that runs the position hold actually
+
+the "actual_position" entity used by the navigation.c was defined in navigation_private as part as posControl entity (of type navigationPosControl_t)
+
+something I notice with the althold function is that it sets the desired position as being the current estimated values of the position and velocity, so we don't need to set an origin or anything similar I think
