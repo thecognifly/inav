@@ -525,7 +525,7 @@ static bool navIsHeadingUsable(void)
     }
 }
 
-static uint8_t calculateCurrentValidityFlags(timeUs_t currentTimeUs)//probably we can use this for assessing the validity of mocap readings?
+static uint32_t calculateCurrentValidityFlags(timeUs_t currentTimeUs)//probably we can use this for assessing the validity of mocap readings?
 {
     /* Figure out if we have valid position data from our data sources */
     uint32_t newFlags = 0;
