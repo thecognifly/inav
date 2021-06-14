@@ -555,10 +555,6 @@ static uint32_t calculateCurrentValidityFlags(timeUs_t currentTimeUs)//probably 
 
     if (sensors(SENSOR_MOCAP) && ((currentTimeUs - posEstimator.mocap.lastUpdateTime) <= MS2US(INAV_MOCAP_TIMEOUT_MS))) {
         newFlags |= EST_MOCAP_VALID;
-
-        // MOCAP will have the best estimation
-        newFlags |= EST_XY_VALID;
-        newFlags |= EST_Z_VALID;
     }
     else if (sensors(SENSOR_MOCAP))
     {
@@ -878,10 +874,9 @@ static void updateEstimatedTopic(timeUs_t currentTimeUs)
 
     /* Correction stage: XY: GPS, FLOW */
     // FIXME: Handle transition from FLOW to GPS and back - seamlessly fly indoor/outdoor
-    const bool estXYCorrectOk =
-        estimationCalculateCorrection_XY_MOCAP(&ctx) ||
-        sensors(SENSOR_MOCAP) ? false : estimationCalculateCorrection_XY_GPS(&ctx) ||
-        sensors(SENSOR_MOCAP) ? false : estimationCalculateCorrection_XY_FLOW(&ctx);
+    bool estXYCorrectOk = estimationCalculateCorrection_XY_MOCAP(&ctx);
+         estXYCorrectOk |= estimationCalculateCorrection_XY_GPS(&ctx);
+         estXYCorrectOk |= estimationCalculateCorrection_XY_FLOW(&ctx);
 
     // If we can't apply correction or accuracy is off the charts - decay velocity to zero
     if (!estXYCorrectOk || ctx.newEPH > positionEstimationConfig()->max_eph_epv) {
