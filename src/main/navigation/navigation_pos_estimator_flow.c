@@ -69,33 +69,36 @@ bool estimationCalculateCorrection_XY_FLOW(estimationContext_t * ctx)
     }
     fpVector3_t flowVel;
 
-    // Calculate linear velocity based on angular velocity and altitude
-    // Technically we should calculate arc length here, but for fast sampling this is accurate enough
-    if (posEstimator.est.aglQual >= SURFACE_QUAL_MID){
-        flowVel.x = - (posEstimator.flow.flowRate[Y] - posEstimator.flow.bodyRate[Y]) * posEstimator.est.aglAlt;
-        flowVel.y =   (posEstimator.flow.flowRate[X] - posEstimator.flow.bodyRate[X]) * posEstimator.est.aglAlt;
-        flowVel.z =    posEstimator.est.vel.z;
-    } else if (posEstimator.surface.reliability >= RANGEFINDER_RELIABILITY_LOW_THRESHOLD){
-        flowVel.x = - (posEstimator.flow.flowRate[Y] - posEstimator.flow.bodyRate[Y]) * posEstimator.surface.alt;
-        flowVel.y =   (posEstimator.flow.flowRate[X] - posEstimator.flow.bodyRate[X]) * posEstimator.surface.alt;
-        flowVel.z =    posEstimator.est.vel.z;
-    } else
-    {
-        return false;
+    // Only updates velocities when MOCAP is not valid because flow is not reliable
+    if (!(ctx->newFlags & EST_MOCAP_VALID)){
+        // Calculate linear velocity based on angular velocity and altitude
+        // Technically we should calculate arc length here, but for fast sampling this is accurate enough
+        if (posEstimator.est.aglQual >= SURFACE_QUAL_MID){
+            flowVel.x = - (posEstimator.flow.flowRate[Y] - posEstimator.flow.bodyRate[Y]) * posEstimator.est.aglAlt;
+            flowVel.y =   (posEstimator.flow.flowRate[X] - posEstimator.flow.bodyRate[X]) * posEstimator.est.aglAlt;
+            flowVel.z =    posEstimator.est.vel.z;
+        } else if (posEstimator.surface.reliability >= RANGEFINDER_RELIABILITY_LOW_THRESHOLD){
+            flowVel.x = - (posEstimator.flow.flowRate[Y] - posEstimator.flow.bodyRate[Y]) * posEstimator.surface.alt;
+            flowVel.y =   (posEstimator.flow.flowRate[X] - posEstimator.flow.bodyRate[X]) * posEstimator.surface.alt;
+            flowVel.z =    posEstimator.est.vel.z;
+        } else
+        {
+            return false;
+        }
+
+        // At this point flowVel will hold linear velocities in earth frame
+        imuTransformVectorBodyToEarth(&flowVel);
+
+        // Calculate velocity correction
+        const float flowVelXInnov = flowVel.x - posEstimator.est.vel.x;
+        const float flowVelYInnov = flowVel.y - posEstimator.est.vel.y;
+
+        //
+        // Velocity correction using the optical flow
+        //
+        ctx->estVelCorr.x = flowVelXInnov * positionEstimationConfig()->w_xy_flow_v * ctx->dt;
+        ctx->estVelCorr.y = flowVelYInnov * positionEstimationConfig()->w_xy_flow_v * ctx->dt;
     }
-
-    // At this point flowVel will hold linear velocities in earth frame
-    imuTransformVectorBodyToEarth(&flowVel);
-
-    // Calculate velocity correction
-    const float flowVelXInnov = flowVel.x - posEstimator.est.vel.x;
-    const float flowVelYInnov = flowVel.y - posEstimator.est.vel.y;
-
-    //
-    // Velocity correction using the optical flow
-    //
-    ctx->estVelCorr.x = flowVelXInnov * positionEstimationConfig()->w_xy_flow_v * ctx->dt;
-    ctx->estVelCorr.y = flowVelYInnov * positionEstimationConfig()->w_xy_flow_v * ctx->dt;
 
     // Calculate position correction if possible/allowed
     if ((ctx->newFlags & EST_MOCAP_VALID)) {
