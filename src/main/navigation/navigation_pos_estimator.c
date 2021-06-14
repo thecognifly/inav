@@ -60,8 +60,8 @@ PG_REGISTER_WITH_RESET_TEMPLATE(positionEstimationConfig_t, positionEstimationCo
 PG_RESET_TEMPLATE(positionEstimationConfig_t, positionEstimationConfig,
         // Inertial position estimator parameters
         .automatic_mag_declination = 1,
-        .reset_altitude_type = NAV_RESET_ON_FIRST_ARM,
-        .reset_home_type = NAV_RESET_ON_FIRST_ARM,
+        .reset_altitude_type = NAV_RESET_ON_EACH_ARM,
+        .reset_home_type = NAV_RESET_ON_EACH_ARM,
         .gravity_calibration_tolerance = 5,     // 5 cm/s/s calibration error accepted (0.5% of gravity)
         .use_gps_velned = 1,         // "Disabled" is mandatory with gps_dyn_model = Pedestrian
         .allow_dead_reckoning = 0,
@@ -555,6 +555,10 @@ static uint32_t calculateCurrentValidityFlags(timeUs_t currentTimeUs)//probably 
 
     if (sensors(SENSOR_MOCAP) && ((currentTimeUs - posEstimator.mocap.lastUpdateTime) <= MS2US(INAV_MOCAP_TIMEOUT_MS))) {
         newFlags |= EST_MOCAP_VALID;
+
+        // MOCAP will have the best estimation
+        newFlags |= EST_XY_VALID;
+        newFlags |= EST_Z_VALID;
     }
     else if (sensors(SENSOR_MOCAP))
     {
@@ -573,9 +577,9 @@ static uint32_t calculateCurrentValidityFlags(timeUs_t currentTimeUs)//probably 
         // epv => v is for vertical
     }
 
-    DEBUG_SET(DEBUG_MOCAP, 0, posEstimator.est.epv);
-    DEBUG_SET(DEBUG_MOCAP, 1, posEstimator.est.eph);
-    DEBUG_SET(DEBUG_MOCAP, 3, newFlags);
+    DEBUG_SET(DEBUG_MOCAP, 4, posEstimator.est.epv);
+    DEBUG_SET(DEBUG_MOCAP, 5, posEstimator.est.eph);
+    DEBUG_SET(DEBUG_MOCAP, 6, newFlags);
 
     return newFlags;
 }
@@ -876,8 +880,8 @@ static void updateEstimatedTopic(timeUs_t currentTimeUs)
     // FIXME: Handle transition from FLOW to GPS and back - seamlessly fly indoor/outdoor
     const bool estXYCorrectOk =
         estimationCalculateCorrection_XY_MOCAP(&ctx) ||
-        estimationCalculateCorrection_XY_GPS(&ctx) ||
-        estimationCalculateCorrection_XY_FLOW(&ctx);
+        sensors(SENSOR_MOCAP) ? false : estimationCalculateCorrection_XY_GPS(&ctx) ||
+        sensors(SENSOR_MOCAP) ? false : estimationCalculateCorrection_XY_FLOW(&ctx);
 
     // If we can't apply correction or accuracy is off the charts - decay velocity to zero
     if (!estXYCorrectOk || ctx.newEPH > positionEstimationConfig()->max_eph_epv) {
@@ -1044,12 +1048,10 @@ void FAST_CODE NOINLINE updatePositionEstimator(void)
     // DEBUG_SET(DEBUG_MOCAP, 2, (posEstimator.est.pos.z * 1.0F));
     // DEBUG_SET(DEBUG_MOCAP, 3, (posEstimator.est.vel.z * 1.0F));
     
-    // DEBUG_SET(DEBUG_MOCAP, 0, (posEstimator.est.pos.x * 1.0F));
-    // DEBUG_SET(DEBUG_MOCAP, 1, (posEstimator.est.pos.y * 1.0F));
-    // DEBUG_SET(DEBUG_MOCAP, 2, (posEstimator.est.pos.z * 1.0F));
-    // DEBUG_SET(DEBUG_MOCAP, 3, (attitude.values.yaw * 1.0F));
-
-    DEBUG_SET(DEBUG_MOCAP, 2, (attitude.values.yaw * 1.0F));
+    DEBUG_SET(DEBUG_MOCAP, 0, (posEstimator.est.pos.x * 1.0F));
+    DEBUG_SET(DEBUG_MOCAP, 1, (posEstimator.est.pos.y * 1.0F));
+    DEBUG_SET(DEBUG_MOCAP, 2, (posEstimator.est.pos.z * 1.0F));
+    DEBUG_SET(DEBUG_MOCAP, 3, (attitude.values.yaw * 1.0F));
 
 }
 
