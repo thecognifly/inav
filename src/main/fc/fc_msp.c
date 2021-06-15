@@ -1554,8 +1554,6 @@ static mspResult_e mspFcProcessInCommand(uint16_t cmdMSP, sbuf_t *src)
 
     const unsigned int dataSize = sbufBytesRemaining(src);
 
-    sensorsClear(SENSOR_MOCAP); //MOCAP should have its own task...
-
     switch (cmdMSP) {
 
     // X,Y,Z,YAW,counter
