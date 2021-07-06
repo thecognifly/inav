@@ -620,7 +620,7 @@ static bool estimationCalculateCorrection_Z(estimationContext_t * ctx)
     }
 
     // Now the priority is given to mocap if reliable enough
-    if (ctx->newFlags & EST_MOCAP_VALID){
+    if (ctx->newFlags & EST_MOCAP_VALID && false){
         bool isAirCushionEffectDetected = ARMING_FLAG(ARMED) && (posEstimator.mocap.pos.z < 20.0f);
 
         const float mocapAltResidual = posEstimator.mocap.pos.z - posEstimator.est.pos.z;
@@ -874,21 +874,23 @@ static void updateEstimatedTopic(timeUs_t currentTimeUs)
 
     /* Correction stage: XY: GPS, FLOW */
     // FIXME: Handle transition from FLOW to GPS and back - seamlessly fly indoor/outdoor
+
     bool estXYCorrectOk = estimationCalculateCorrection_XY_MOCAP(&ctx);
          estXYCorrectOk |= estimationCalculateCorrection_XY_GPS(&ctx);
          estXYCorrectOk |= estimationCalculateCorrection_XY_FLOW(&ctx);
 
-    // const bool estXYCorrectOk = estimationCalculateCorrection_XY_MOCAP(&ctx);
-
+    // bool estXYCorrectOk = estimationCalculateCorrection_XY_MOCAP(&ctx)||
+    //                       estimationCalculateCorrection_XY_GPS(&ctx)||
+    //                       estimationCalculateCorrection_XY_FLOW(&ctx);
     // If we can't apply correction or accuracy is off the charts - decay velocity to zero
-    // if (!estXYCorrectOk || ctx.newEPH > positionEstimationConfig()->max_eph_epv) {
-    //     ctx.estVelCorr.x = (0.0f - posEstimator.est.vel.x) * positionEstimationConfig()->w_xy_res_v * ctx.dt;
-    //     ctx.estVelCorr.y = (0.0f - posEstimator.est.vel.y) * positionEstimationConfig()->w_xy_res_v * ctx.dt;
-    // }
+    if (!estXYCorrectOk || ctx.newEPH > positionEstimationConfig()->max_eph_epv) {
+        ctx.estVelCorr.x = (0.0f - posEstimator.est.vel.x) * positionEstimationConfig()->w_xy_res_v * ctx.dt;
+        ctx.estVelCorr.y = (0.0f - posEstimator.est.vel.y) * positionEstimationConfig()->w_xy_res_v * ctx.dt;
+    }
 
-    // if (!estZCorrectOk || ctx.newEPV > positionEstimationConfig()->max_eph_epv) {
-    //     ctx.estVelCorr.z = (0.0f - posEstimator.est.vel.z) * positionEstimationConfig()->w_z_res_v * ctx.dt;
-    // }
+    if (!estZCorrectOk || ctx.newEPV > positionEstimationConfig()->max_eph_epv) {
+        ctx.estVelCorr.z = (0.0f - posEstimator.est.vel.z) * positionEstimationConfig()->w_z_res_v * ctx.dt;
+    }
     //
     // Apply corrections
     //

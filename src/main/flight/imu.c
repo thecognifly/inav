@@ -458,9 +458,9 @@ STATIC_UNIT_TESTED void imuUpdateEulerAngles(void)
     attitude.values.pitch = RADIANS_TO_DECIDEGREES((0.5f * M_PIf) - acos_approx(-rMat[2][0]));
     attitude.values.yaw = RADIANS_TO_DECIDEGREES(-atan2_approx(rMat[1][0], rMat[0][0]));
 
-    // if (mocap_received_values_t.valid){
-    //     attitude.values.yaw = mocap_received_values_t.YAW * 10.0;
-    // }
+    if (mocap_received_values_t.valid){
+        attitude.values.yaw = mocap_received_values_t.YAW * 10.0;
+    }
 
     if (attitude.values.yaw < 0)
         attitude.values.yaw += 3600;
@@ -583,6 +583,19 @@ static void imuCalculateEstimatedAttitude(float dT)
     // In absence of GPS MAG is the only option
     if (canUseMAG) {
         useMag = true;
+    }
+    else if (sensors(SENSOR_MOCAP)){
+        if (gpsHeadingInitialized) {
+            courseOverGround = DECIDEGREES_TO_RADIANS(mocap_received_values_t.YAW);
+            useCOG = true;
+        }
+        else {
+            imuComputeQuaternionFromRPY(attitude.values.roll, attitude.values.pitch, mocap_received_values_t.YAW);
+            gpsHeadingInitialized = true;
+
+            // Force reset of heading hold target
+            resetHeadingHoldTarget(DECIDEGREES_TO_DEGREES(attitude.values.yaw));
+        }
     }
 #endif
 
