@@ -1975,7 +1975,13 @@ void updateActualHeading(bool headingValid, int32_t newHeading)
  *-----------------------------------------------------------*/
 const navEstimatedPosVel_t * navGetCurrentActualPositionAndVelocity(void)
 {
-    return posControl.flags.isTerrainFollowEnabled ? &posControl.actualState.agl : &posControl.actualState.abs;
+    if (sensors(SENSOR_MOCAP)) {
+        return &posControl.actualState.abs;
+    } 
+    else {
+        return posControl.flags.isTerrainFollowEnabled ? &posControl.actualState.agl : &posControl.actualState.abs;
+    }
+    
 }
 
 /*-----------------------------------------------------------
