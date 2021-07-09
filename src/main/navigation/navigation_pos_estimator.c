@@ -932,7 +932,9 @@ static void publishEstimatedTopic(timeUs_t currentTimeUs)
     static navigationTimer_t posPublishTimer;
 
     /* IMU operates in decidegrees while INAV operates in deg*100 */
-    updateActualHeading(navIsHeadingUsable(), DECIDEGREES_TO_CENTIDEGREES(attitude.values.yaw));
+    // updateActualHeading(navIsHeadingUsable(), DECIDEGREES_TO_CENTIDEGREES(attitude.values.yaw));
+    updateActualHeading(navIsHeadingUsable(), posEstimator.mocap.yaw);
+
 
     /* Position and velocity are published with INAV_POSITION_PUBLISH_RATE_HZ */
     if (updateTimer(&posPublishTimer, HZ2US(INAV_POSITION_PUBLISH_RATE_HZ), currentTimeUs)) {
