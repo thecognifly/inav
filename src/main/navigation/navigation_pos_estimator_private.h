@@ -87,6 +87,11 @@ typedef struct {
 
 typedef struct {
     timeUs_t    lastUpdateTime; // Last update time (us)
+    fpVector3_t pos;
+} navPosisitonEstimatorDESIRED_POS;
+
+typedef struct {
+    timeUs_t    lastUpdateTime; // Last update time (us)
     pt1Filter_t avgFilter;
     float       alt;            // Raw barometric altitude (cm)
     float       epv;
@@ -174,6 +179,7 @@ typedef struct {
     navPositionEstimatorPITOT_t pitot;
     navPositionEstimatorFLOW_t  flow;
     navPositionEstimatorMOCAP_t mocap;
+    navPosisitonEstimatorDESIRED_POS desired_position;
 
     // IMU data
     navPosisitonEstimatorIMU_t  imu;

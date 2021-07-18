@@ -55,7 +55,7 @@
 #include "sensors/sensors.h"
 #include "sensors/acceleration.h"
 #include "sensors/boardalignment.h"
-
+#include "sensors/mocap.h"
 
 // Multirotors:
 #define MR_RTH_CLIMB_OVERSHOOT_CM   100  // target this amount of cm *above* the target altitude to ensure it is actually reached (Vz > 0 at target alt)
@@ -65,6 +65,10 @@
 #define FW_RTH_CLIMB_OVERSHOOT_CM   100
 #define FW_RTH_CLIMB_MARGIN_MIN_CM  100
 #define FW_RTH_CLIMB_MARGIN_PERCENT 15
+
+float desired_x = 1.1;
+float desired_y = 1.2;
+float desired_z = 1.3;
 
 /*-----------------------------------------------------------
  * Compatibility for home position
@@ -1878,6 +1882,11 @@ void updateActualHorizontalPositionAndVelocity(bool estPosValid, bool estVelVali
     navActualVelocity[X] = constrain(newVelX, -32678, 32767);
     navActualVelocity[Y] = constrain(newVelY, -32678, 32767);
 #endif
+
+    DEBUG_SET(DEBUG_MOCAP, 0, (desired_x * 1.0F));
+    DEBUG_SET(DEBUG_MOCAP, 1, (desired_y * 1.0F));
+    DEBUG_SET(DEBUG_MOCAP, 2, (desired_z * 1.0F));
+    DEBUG_SET(DEBUG_MOCAP, 3, (mocap_desired_pos_t.active * 1.0F));
 }
 
 /*-----------------------------------------------------------
@@ -2313,8 +2322,16 @@ void setDesiredPosition(const fpVector3_t * pos, int32_t yaw, navSetWaypointFlag
 {
     // XY-position update is allowed only when not braking in NAV_CRUISE_BRAKING
     if ((useMask & NAV_POS_UPDATE_XY) != 0 && !STATE(NAV_CRUISE_BRAKING)) {
-        posControl.desiredState.pos.x = pos->x;
-        posControl.desiredState.pos.y = pos->y;
+        if(mocap_desired_pos_t.active){
+            posControl.desiredState.pos.x = mocap_desired_pos_t.x;//mocap_desired_pos_t.x*0;
+            posControl.desiredState.pos.y = mocap_desired_pos_t.y;//mocap_desired_pos_t.y*0;
+        }
+        else{
+            posControl.desiredState.pos.x = pos->x;
+            posControl.desiredState.pos.y = pos->y;
+        }
+        // posControl.desiredState.pos.x = pos->x;
+        // posControl.desiredState.pos.y = pos->y;
     }
 
     // Z-position
@@ -2334,6 +2351,7 @@ void setDesiredPosition(const fpVector3_t * pos, int32_t yaw, navSetWaypointFlag
     else if ((useMask & NAV_POS_UPDATE_BEARING_TAIL_FIRST) != 0) {
         posControl.desiredState.yaw = wrap_36000(calculateBearingToDestination(pos) - 18000);
     }
+
 }
 
 void calculateFarAwayTarget(fpVector3_t * farAwayPos, int32_t yaw, int32_t distance)
@@ -3197,7 +3215,11 @@ void navigationUsePIDs(void)
                                         NAV_DTERM_CUT_HZ
     );
 }
-
+void onNewDesPos(void){
+    desired_x = mocap_desired_pos_t.x;
+    desired_y = mocap_desired_pos_t.y;
+    desired_z = mocap_desired_pos_t.z;
+}
 void navigationInit(void)
 {
     /* Initial state */
@@ -3333,6 +3355,7 @@ int32_t getCruiseHeadingAdjustment(void) {
 }
 
 #else // NAV
+
 
 #ifdef USE_GPS
 /* Fallback if navigation is not compiled in - handle GPS home coordinates */

@@ -137,6 +137,14 @@ __mocap_received_values_t mocap_received_values_t = {
     .lastUpdateTime = 0
 };
 
+__mocap_desired_pos_t mocap_desired_pos_t = {
+    .active = 0,
+    .x = 0,
+    .y = 0,
+    .z = 0,
+    .lastUpdateTime = 0
+};
+
 static const char pidnames[] =
     "ROLL;"
     "PITCH;"
@@ -1576,6 +1584,19 @@ static mspResult_e mspFcProcessInCommand(uint16_t cmdMSP, sbuf_t *src)
                 sensorsSet(SENSOR_MOCAP); //just copying the behaviour from SET_RAW_GPS
             }
             onNewMOCAP();
+        } else
+            return MSP_RESULT_ERROR;
+        break;
+
+    case MSP_DES_POS:
+        if ((dataSize >= 4 * sizeof(uint16_t)) ) {
+            mocap_desired_pos_t.active = sbufReadU16(src);   
+            mocap_desired_pos_t.x = sbufReadU16(src);
+            mocap_desired_pos_t.y = sbufReadU16(src);
+            mocap_desired_pos_t.z = sbufReadU16(src);
+            mocap_desired_pos_t.lastUpdateTime = micros();
+            onNewDesPos();
+            // onNewMOCAP();
         } else
             return MSP_RESULT_ERROR;
         break;

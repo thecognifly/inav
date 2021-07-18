@@ -126,6 +126,7 @@
 // MSP commands for Cleanflight original features
 //
 #define MSP_MOCAP                       30    //in message
+#define MSP_DES_POS                     31    //in message 
 
 #define MSP_MODE_RANGES                 34    //out message         Returns all mode ranges
 #define MSP_SET_MODE_RANGE              35    //in message          Sets a single mode range

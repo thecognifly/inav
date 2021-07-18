@@ -17,4 +17,16 @@ typedef struct {
 } __mocap_received_values_t;
 
 
+/*this is the container that contains the desired position to pursue, 
+using mocap as a position feedback. The desired position is in cm.*/
+typedef struct{
+    bool active;
+    float x;
+    float y;
+    float z;
+    timeUs_t lastUpdateTime;
+} __mocap_desired_pos_t; 
+
+
 extern __mocap_received_values_t mocap_received_values_t;
+extern __mocap_desired_pos_t mocap_desired_pos_t;

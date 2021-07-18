@@ -304,6 +304,14 @@ void onNewGPSData(void)
 #endif
 
 #if defined USE_MOCAP
+// void onNewDesPos(void)
+// {
+//     posEstimator.desired_position.lastUpdateTime = mocap_desired_pos_t.lastUpdateTime;
+//     posEstimator.desired_position.pos.x = mocap_desired_pos_t.x;
+//     posEstimator.desired_position.pos.y = mocap_desired_pos_t.y;
+//     posEstimator.desired_position.pos.z = mocap_desired_pos_t.z;
+// }
+
 void onNewMOCAP(void)
 {
     static timeUs_t lastUpdateTime = 0;
@@ -1049,10 +1057,15 @@ void FAST_CODE NOINLINE updatePositionEstimator(void)
     // DEBUG_SET(DEBUG_MOCAP, 2, (posEstimator.est.pos.z * 1.0F));
     // DEBUG_SET(DEBUG_MOCAP, 3, (posEstimator.est.vel.z * 1.0F));
     
-    DEBUG_SET(DEBUG_MOCAP, 0, (posEstimator.est.pos.x * 1.0F));
-    DEBUG_SET(DEBUG_MOCAP, 1, (posEstimator.est.pos.y * 1.0F));
-    DEBUG_SET(DEBUG_MOCAP, 2, (posEstimator.est.pos.z * 1.0F));
-    DEBUG_SET(DEBUG_MOCAP, 3, (attitude.values.yaw * 1.0F));
+    // DEBUG_SET(DEBUG_MOCAP, 0, (posEstimator.est.pos.x * 1.0F));
+    // DEBUG_SET(DEBUG_MOCAP, 1, (posEstimator.est.pos.y * 1.0F));
+    // DEBUG_SET(DEBUG_MOCAP, 2, (posEstimator.est.pos.z * 1.0F));
+    // DEBUG_SET(DEBUG_MOCAP, 3, (attitude.values.yaw * 1.0F));
+
+    // DEBUG_SET(DEBUG_MOCAP, 0, (mocap_desired_pos_t.x * 1.0F));
+    // DEBUG_SET(DEBUG_MOCAP, 1, (mocap_desired_pos_t.y * 1.0F));
+    // DEBUG_SET(DEBUG_MOCAP, 2, (mocap_desired_pos_t.z * 1.0F));
+    // DEBUG_SET(DEBUG_MOCAP, 3, (mocap_desired_pos_t.active * 1.0F));
 
 }
 
