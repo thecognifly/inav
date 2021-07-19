@@ -1589,11 +1589,15 @@ static mspResult_e mspFcProcessInCommand(uint16_t cmdMSP, sbuf_t *src)
         break;
 
     case MSP_DES_POS:
-        if ((dataSize >= 4 * sizeof(uint16_t)) ) {
+        if ((dataSize >= 7 * sizeof(uint16_t)) ) {
             mocap_desired_pos_t.active = sbufReadU16(src);   
             mocap_desired_pos_t.x = sbufReadU16(src);
             mocap_desired_pos_t.y = sbufReadU16(src);
             mocap_desired_pos_t.z = sbufReadU16(src);
+
+            mocap_desired_pos_t.sx = sbufReadU16(src);
+            mocap_desired_pos_t.sy = sbufReadU16(src);
+            mocap_desired_pos_t.sz = sbufReadU16(src);
             mocap_desired_pos_t.lastUpdateTime = micros();
             onNewDesPos();
             // onNewMOCAP();

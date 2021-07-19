@@ -1883,8 +1883,22 @@ void updateActualHorizontalPositionAndVelocity(bool estPosValid, bool estVelVali
     navActualVelocity[Y] = constrain(newVelY, -32678, 32767);
 #endif
 
-    DEBUG_SET(DEBUG_MOCAP, 0, (desired_x * 1.0F));
-    DEBUG_SET(DEBUG_MOCAP, 1, (desired_y * 1.0F));
+    float x_value = mocap_desired_pos_t.x;
+    float y_value = mocap_desired_pos_t.y;
+    if(mocap_desired_pos_t.sx == 0){
+        x_value *= -1;
+    }
+    if(mocap_desired_pos_t.sy == 0){
+        y_value *= -1;
+    }
+    
+    if(mocap_desired_pos_t.active){
+        posControl.desiredState.pos.x = x_value;
+        posControl.desiredState.pos.y = y_value;
+        mocap_desired_pos_t.active = 0;
+    }
+    DEBUG_SET(DEBUG_MOCAP, 0, (x_value * 1.0F));
+    DEBUG_SET(DEBUG_MOCAP, 1, (y_value * 1.0F));
     DEBUG_SET(DEBUG_MOCAP, 2, (desired_z * 1.0F));
     DEBUG_SET(DEBUG_MOCAP, 3, (mocap_desired_pos_t.active * 1.0F));
 }
@@ -2322,16 +2336,16 @@ void setDesiredPosition(const fpVector3_t * pos, int32_t yaw, navSetWaypointFlag
 {
     // XY-position update is allowed only when not braking in NAV_CRUISE_BRAKING
     if ((useMask & NAV_POS_UPDATE_XY) != 0 && !STATE(NAV_CRUISE_BRAKING)) {
-        if(mocap_desired_pos_t.active){
-            posControl.desiredState.pos.x = mocap_desired_pos_t.x;//mocap_desired_pos_t.x*0;
-            posControl.desiredState.pos.y = mocap_desired_pos_t.y;//mocap_desired_pos_t.y*0;
-        }
-        else{
-            posControl.desiredState.pos.x = pos->x;
-            posControl.desiredState.pos.y = pos->y;
-        }
-        // posControl.desiredState.pos.x = pos->x;
-        // posControl.desiredState.pos.y = pos->y;
+        // if(mocap_desired_pos_t.active){
+        //     posControl.desiredState.pos.x = mocap_desired_pos_t.x;//mocap_desired_pos_t.x*0;
+        //     posControl.desiredState.pos.y = mocap_desired_pos_t.y;//mocap_desired_pos_t.y*0;
+        // }
+        // else{
+        //     posControl.desiredState.pos.x = pos->x;
+        //     posControl.desiredState.pos.y = pos->y;
+        // }
+        posControl.desiredState.pos.x = pos->x;
+        posControl.desiredState.pos.y = pos->y;
     }
 
     // Z-position

@@ -24,6 +24,9 @@ typedef struct{
     float x;
     float y;
     float z;
+    int sx; // should be 1 if x is positive, 0 if negative
+    int sy;
+    int sz;
     timeUs_t lastUpdateTime;
 } __mocap_desired_pos_t; 
 
